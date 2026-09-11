@@ -19,3 +19,17 @@ class Student(Base):
     skills = Column(Text, nullable=True)
     interests = Column(Text, nullable=True)
     fyp_status = Column(String, nullable=True)
+
+class Team(Base):
+    __tablename__ = "teams"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    project_title = Column(String, nullable=True)
+    description = Column(Text, nullable=True)
+    department_preference = Column(String, nullable=False)
+    spots_available = Column(Integer, nullable=False)
+    skills_needed = Column(Text, nullable=True)
+    roles_needed = Column(Text, nullable=True)
+    contact = Column(String, nullable=True)
+    created_by = Column(Integer, nullable=False)

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from sqlalchemy import text
-from .schemas import StudentCreate
+from .schemas import StudentCreate, TeamCreate
 from .database import engine, Base
 from . import models, database
 app = FastAPI()
@@ -73,6 +73,58 @@ def get_students():
             "skills": student.skills,
             "interests": student.interests,
             "fyp_status": student.fyp_status
+        })
+
+    db.close()
+
+    return result
+
+@app.post("/teams")
+def create_team(team: TeamCreate):
+    db = database.SessionLocal()
+
+    new_team = models.Team(
+        name=team.name,
+        project_title=team.project_title,
+        description=team.description,
+        department_preference=team.department_preference,
+        spots_available=team.spots_available,
+        skills_needed=team.skills_needed,
+        roles_needed=team.roles_needed,
+        contact=team.contact,
+        created_by=team.created_by
+    )
+
+    db.add(new_team)
+    db.commit()
+    db.refresh(new_team)
+    db.close()
+
+    return {
+        "message": "Team created successfully",
+        "team_id": new_team.id
+    }
+
+@app.get("/teams")
+def get_teams():
+    db = database.SessionLocal()
+
+    teams = db.query(models.Team).all()
+
+    result = []
+
+    for team in teams:
+        result.append({
+            "id": team.id,
+            "name": team.name,
+            "project_title": team.project_title,
+            "description": team.description,
+            "department_preference": team.department_preference,
+            "spots_available": team.spots_available,
+            "skills_needed": team.skills_needed,
+            "roles_needed": team.roles_needed,
+            "contact": team.contact,
+            "created_by": team.created_by
         })
 
     db.close()
