@@ -49,3 +49,32 @@ def create_student(student: StudentCreate):
         "message": "Student created successfully",
         "student_id": new_student.id
     }
+
+@app.get("/students")
+def get_students():
+    db = database.SessionLocal()
+
+    students = db.query(models.Student).all()
+
+    result = []
+
+    for student in students:
+        result.append({
+            "id": student.id,
+            "name": student.name,
+            "university_id": student.university_id,
+            "email": student.email,
+            "program": student.program,
+            "profile_picture": student.profile_picture,
+            "bio": student.bio,
+            "github": student.github,
+            "linkedin": student.linkedin,
+            "whatsapp": student.whatsapp,
+            "skills": student.skills,
+            "interests": student.interests,
+            "fyp_status": student.fyp_status
+        })
+
+    db.close()
+
+    return result
