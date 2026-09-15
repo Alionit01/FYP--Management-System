@@ -138,3 +138,30 @@ def get_teams():
     db.close()
 
     return result
+
+@app.get("/students/{student_id}")
+def get_student(student_id: int):
+    db = database.SessionLocal()
+
+    student = db.query(models.Student).filter(
+        models.Student.id == student_id
+    ).first()
+
+    db.close()
+
+    if not student:
+        return {"message": "Student not found"}
+
+    return {
+        "id": student.id,
+        "name": student.name,
+        "university_id": student.university_id,
+        "program": student.program,
+        "profile_picture": student.profile_picture,
+        "bio": student.bio,
+        "github": student.github,
+        "linkedin": student.linkedin,
+        "skills": student.skills,
+        "interests": student.interests,
+        "fyp_status": student.fyp_status
+    }
