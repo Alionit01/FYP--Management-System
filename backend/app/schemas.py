@@ -27,3 +27,7 @@ class TeamCreate(BaseModel):
     roles_needed: Optional[str] = None
     contact: Optional[str] = None
     created_by: int
+
+class StudentLogin(BaseModel):
+    email: EmailStr
+    password: str

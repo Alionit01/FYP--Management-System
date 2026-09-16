@@ -1,9 +1,13 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, HTTPException
 from sqlalchemy import text
-from .schemas import StudentCreate, TeamCreate
+from fastapi.middleware.cors import CORSMiddleware
+import os
+
 from .database import engine, Base
 from . import models, database
+from .schemas import StudentCreate, TeamCreate, StudentLogin
+from .auth import hash_password, verify_password, create_access_token
+
 app = FastAPI()
 
 app.add_middleware(
@@ -30,13 +34,41 @@ def db_test():
 
 @app.post("/students")
 def create_student(student: StudentCreate):
+    university_domain = os.getenv("UNIVERSITY_EMAIL_DOMAIN")
+
+    if not university_domain:
+        raise HTTPException(
+            status_code=500,
+            detail="University email domain is not configured"
+        )
+
+    if not student.email.lower().endswith(
+        "@" + university_domain.lower()
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="University email required"
+        )
+
     db = database.SessionLocal()
+
+    existing_student = db.query(models.Student).filter(
+        (models.Student.email == student.email) |
+        (models.Student.university_id == student.university_id)
+    ).first()
+
+    if existing_student:
+        db.close()
+        raise HTTPException(
+            status_code=400,
+            detail="Email or university ID already registered"
+        )
 
     new_student = models.Student(
         name=student.name,
         university_id=student.university_id,
         email=student.email,
-        password=student.password,
+        password=hash_password(student.password),
         program=student.program,
         profile_picture=student.profile_picture,
         bio=student.bio,
@@ -51,11 +83,14 @@ def create_student(student: StudentCreate):
     db.add(new_student)
     db.commit()
     db.refresh(new_student)
+
+    student_id = new_student.id
+
     db.close()
 
     return {
         "message": "Student created successfully",
-        "student_id": new_student.id
+        "student_id": student_id
     }
 
 @app.get("/students")
@@ -71,13 +106,11 @@ def get_students():
             "id": student.id,
             "name": student.name,
             "university_id": student.university_id,
-            "email": student.email,
             "program": student.program,
             "profile_picture": student.profile_picture,
             "bio": student.bio,
             "github": student.github,
             "linkedin": student.linkedin,
-            "whatsapp": student.whatsapp,
             "skills": student.skills,
             "interests": student.interests,
             "fyp_status": student.fyp_status
@@ -164,4 +197,36 @@ def get_student(student_id: int):
         "skills": student.skills,
         "interests": student.interests,
         "fyp_status": student.fyp_status
+    }
+
+@app.post("/login")
+def login(student: StudentLogin):
+    db = database.SessionLocal()
+
+    user = db.query(models.Student).filter(
+        models.Student.email == student.email
+    ).first()
+
+    if not user:
+        db.close()
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+
+    if not verify_password(student.password, user.password):
+        db.close()
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+
+    token = create_access_token(user.id)
+
+    db.close()
+
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "student_id": user.id
     }
