@@ -9,6 +9,7 @@ import Register from "./pages/Register";
 import TeamProfile from "./pages/TeamProfile";
 import CreateTeam from "./pages/CreateTeam";
 import MyTeam from "./pages/MyTeam";
+import MyProfile from "./pages/MyProfile";
 
 
 function App() {
@@ -21,11 +22,13 @@ function App() {
 
         <Route path="/students" element={<Students />} />
         <Route path="/students/:id" element={<StudentProfile />} />
+        <Route path="/my-profile" element={<MyProfile />} />
 
         <Route path="/teams" element={<Teams />} />
         <Route path="/teams/:id" element={<TeamProfile />} />
         <Route path="/my-team" element={<MyTeam />} />
         <Route path="/teams/create" element={<CreateTeam />} />
+        
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
       </Routes>

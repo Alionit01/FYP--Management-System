@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,8 +36,10 @@ function Login() {
         throw new Error(data.detail || "Login failed");
       }
 
-      localStorage.setItem("access_token", data.access_token);
-      localStorage.setItem("student_id", data.student_id);
+      login(
+        data.access_token,
+        data.student_id
+      );
 
       navigate("/");
     } catch (error) {
