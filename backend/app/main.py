@@ -229,6 +229,15 @@ def create_team(team: TeamCreate):
     db.commit()
     db.refresh(new_team)
 
+    creator_member = models.TeamMember(
+        team_id=new_team.id,
+        student_id=team.created_by
+    )
+
+    db.add(creator_member)
+
+    db.commit()
+
     team_id = new_team.id
 
     db.close()
@@ -283,20 +292,27 @@ def get_team(team_id: int):
         )
 
     # Find the team creator
-    creator = db.query(models.Student).filter(
-        models.Student.id == team.created_by
-    ).first()
+    members = (
+        db.query(models.Student)
+        .join(
+            models.TeamMember,
+            models.TeamMember.student_id == models.Student.id
+        )
+        .filter(
+            models.TeamMember.team_id == team.id
+        )
+        .all()
+    )
 
-    # For now, the creator is the only team member
-    members = []
+    member_list = []
 
-    if creator:
-        members.append({
-            "id": creator.id,
-            "name": creator.name,
-            "program": creator.program,
-            "university_id": creator.university_id,
-            "profile_picture": creator.profile_picture
+    for student in members:
+        member_list.append({
+            "id": student.id,
+            "name": student.name,
+            "program": student.program,
+            "university_id": student.university_id,
+            "profile_picture": student.profile_picture
         })
 
     result = {
@@ -310,9 +326,115 @@ def get_team(team_id: int):
         "roles_needed": team.roles_needed,
         "contact": team.contact,
         "created_by": team.created_by,
-        "members": members
+        "members": member_list
     }
 
     db.close()
 
     return result
+
+@app.get("/teams/{team_id}/members")
+def get_team_members(team_id: int):
+
+    db = database.SessionLocal()
+
+    team = db.query(models.Team).filter(
+        models.Team.id == team_id
+    ).first()
+
+    if not team:
+        db.close()
+        raise HTTPException(
+            status_code=404,
+            detail="Team not found"
+        )
+
+    members = (
+        db.query(models.Student)
+        .join(
+            models.TeamMember,
+            models.TeamMember.student_id == models.Student.id
+        )
+        .filter(
+            models.TeamMember.team_id == team_id
+        )
+        .all()
+    )
+
+    result = []
+
+    for student in members:
+        result.append({
+            "id": student.id,
+            "name": student.name,
+            "university_id": student.university_id,
+            "program": student.program,
+            "profile_picture": student.profile_picture
+        })
+
+    db.close()
+
+    return result
+
+@app.post("/teams/{team_id}/members/{student_id}")
+def add_team_member(team_id: int, student_id: int):
+
+    db = database.SessionLocal()
+
+    team = db.query(models.Team).filter(
+        models.Team.id == team_id
+    ).first()
+
+    if not team:
+        db.close()
+        raise HTTPException(
+            status_code=404,
+            detail="Team not found"
+        )
+
+    student = db.query(models.Student).filter(
+        models.Student.id == student_id
+    ).first()
+
+    if not student:
+        db.close()
+        raise HTTPException(
+            status_code=404,
+            detail="Student not found"
+        )
+
+    existing_member = db.query(models.TeamMember).filter(
+        models.TeamMember.team_id == team_id,
+        models.TeamMember.student_id == student_id
+    ).first()
+
+    if existing_member:
+        db.close()
+        raise HTTPException(
+            status_code=400,
+            detail="Student is already a member of this team"
+        )
+
+    if team.spots_available <= 0:
+        db.close()
+        raise HTTPException(
+            status_code=400,
+            detail="Team has no available spots"
+        )
+
+    member = models.TeamMember(
+        team_id=team_id,
+        student_id=student_id
+    )
+
+    db.add(member)
+
+    team.spots_available -= 1
+
+    db.commit()
+
+    db.close()
+
+    return {
+        "message": "Student added to team successfully"
+    }

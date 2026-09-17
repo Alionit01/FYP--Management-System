@@ -33,3 +33,10 @@ class Team(Base):
     roles_needed = Column(Text, nullable=True)
     contact = Column(String, nullable=True)
     created_by = Column(Integer, nullable=False)
+
+class TeamMember(Base):
+    __tablename__ = "team_members"
+
+    id = Column(Integer, primary_key=True, index=True)
+    team_id = Column(Integer, nullable=False)
+    student_id = Column(Integer, nullable=False)
