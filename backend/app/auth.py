@@ -5,10 +5,12 @@ from dotenv import load_dotenv
 from jose import jwt
 from passlib.context import CryptContext
 
+
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
+
 
 pwd_context = CryptContext(
     schemes=["bcrypt"],
@@ -32,4 +34,8 @@ def create_access_token(user_id):
         "exp": expire
     }
 
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(
+        payload,
+        SECRET_KEY,
+        algorithm=ALGORITHM
+    )
