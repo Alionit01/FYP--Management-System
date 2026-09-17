@@ -52,15 +52,24 @@ function Teams() {
     <main className="max-w-6xl mx-auto px-4 py-8 pb-24">
 
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">
-          Find Teams
-        </h1>
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+  <div>
+    <h1 className="text-3xl font-bold">
+      Find Teams
+    </h1>
 
-        <p className="mt-2 text-gray-600">
-          Explore FYP teams looking for members.
-        </p>
-      </div>
+    <p className="mt-2 text-gray-600">
+      Explore FYP teams looking for members.
+    </p>
+  </div>
+
+  <button
+    onClick={() => navigate("/teams/create")}
+    className="w-full sm:w-auto bg-black text-white px-5 py-3 rounded-xl font-medium"
+  >
+    Create Team
+  </button>
+</div>
 
       {/* Search */}
       <div className="mt-6">

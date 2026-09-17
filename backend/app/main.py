@@ -1,6 +1,5 @@
 import os
 
-from fastapi import FastAPI, HTTPException
 from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -8,7 +7,8 @@ from .database import engine, Base
 from . import models, database
 from .schemas import StudentCreate, TeamCreate, StudentLogin
 from .auth import hash_password, verify_password, create_access_token
-
+from fastapi import FastAPI, HTTPException, Depends
+from .dependencies import get_current_student
 
 app = FastAPI()
 
@@ -209,7 +209,10 @@ def get_student(student_id: int):
 # =========================
 
 @app.post("/teams")
-def create_team(team: TeamCreate):
+def create_team(
+    team: TeamCreate,
+    current_student=Depends(get_current_student)
+):
 
     db = database.SessionLocal()
 
@@ -222,7 +225,7 @@ def create_team(team: TeamCreate):
         skills_needed=team.skills_needed,
         roles_needed=team.roles_needed,
         contact=team.contact,
-        created_by=team.created_by
+        created_by=current_student.id
     )
 
     db.add(new_team)
@@ -231,7 +234,7 @@ def create_team(team: TeamCreate):
 
     creator_member = models.TeamMember(
         team_id=new_team.id,
-        student_id=team.created_by
+        student_id=current_student.id
     )
 
     db.add(creator_member)
@@ -377,13 +380,24 @@ def get_team_members(team_id: int):
     return result
 
 @app.post("/teams/{team_id}/members/{student_id}")
-def add_team_member(team_id: int, student_id: int):
+def add_team_member(
+    team_id: int,
+    student_id: int,
+    current_student=Depends(get_current_student)
+):
 
     db = database.SessionLocal()
 
     team = db.query(models.Team).filter(
         models.Team.id == team_id
     ).first()
+
+    if team.created_by != current_student.id:
+        db.close()
+        raise HTTPException(
+            status_code=403,
+            detail="Only the team owner can add members"
+        )
 
     if not team:
         db.close()
@@ -438,3 +452,66 @@ def add_team_member(team_id: int, student_id: int):
     return {
         "message": "Student added to team successfully"
     }
+
+@app.get("/my-team")
+def get_my_team(
+    current_student=Depends(get_current_student)
+):
+    db = database.SessionLocal()
+
+    membership = db.query(models.TeamMember).filter(
+        models.TeamMember.student_id == current_student.id
+    ).first()
+
+    if not membership:
+        db.close()
+        return None
+
+    team = db.query(models.Team).filter(
+        models.Team.id == membership.team_id
+    ).first()
+
+    if not team:
+        db.close()
+        return None
+
+    members = (
+        db.query(models.Student)
+        .join(
+            models.TeamMember,
+            models.TeamMember.student_id == models.Student.id
+        )
+        .filter(
+            models.TeamMember.team_id == team.id
+        )
+        .all()
+    )
+
+    member_list = []
+
+    for student in members:
+        member_list.append({
+            "id": student.id,
+            "name": student.name,
+            "university_id": student.university_id,
+            "program": student.program,
+            "profile_picture": student.profile_picture
+        })
+
+    result = {
+        "id": team.id,
+        "name": team.name,
+        "project_title": team.project_title,
+        "description": team.description,
+        "department_preference": team.department_preference,
+        "spots_available": team.spots_available,
+        "skills_needed": team.skills_needed,
+        "roles_needed": team.roles_needed,
+        "contact": team.contact,
+        "created_by": team.created_by,
+        "members": member_list
+    }
+
+    db.close()
+
+    return result
