@@ -5,7 +5,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .database import engine, Base
 from . import models, database
-from .schemas import StudentCreate, TeamCreate, StudentLogin
+from .schemas import (
+    StudentCreate,
+    TeamCreate,
+    StudentLogin,
+    StudentUpdate
+)
 from .auth import hash_password, verify_password, create_access_token
 from fastapi import FastAPI, HTTPException, Depends
 from .dependencies import get_current_student
@@ -202,6 +207,63 @@ def get_student(student_id: int):
         "interests": student.interests,
         "fyp_status": student.fyp_status
     }
+
+@app.put("/my-profile")
+def update_my_profile(
+    student_data: StudentUpdate,
+    current_student=Depends(get_current_student)
+):
+    db = database.SessionLocal()
+
+    student = db.query(models.Student).filter(
+        models.Student.id == current_student.id
+    ).first()
+
+    if not student:
+        db.close()
+        raise HTTPException(
+            status_code=404,
+            detail="Student not found"
+        )
+
+    student.name = student_data.name
+    student.program = student_data.program
+    student.profile_picture = student_data.profile_picture
+    student.bio = student_data.bio
+    student.github = student_data.github
+    student.linkedin = student_data.linkedin
+    student.whatsapp = student_data.whatsapp
+    student.skills = student_data.skills
+    student.interests = student_data.interests
+    student.fyp_status = student_data.fyp_status
+
+    db.commit()
+    db.close()
+
+    return {
+        "message": "Profile updated successfully"
+    }
+
+@app.get("/my-profile")
+def get_my_profile(
+    current_student=Depends(get_current_student)
+):
+    return {
+        "id": current_student.id,
+        "name": current_student.name,
+        "university_id": current_student.university_id,
+        "email": current_student.email,
+        "program": current_student.program,
+        "profile_picture": current_student.profile_picture,
+        "bio": current_student.bio,
+        "github": current_student.github,
+        "linkedin": current_student.linkedin,
+        "whatsapp": current_student.whatsapp,
+        "skills": current_student.skills,
+        "interests": current_student.interests,
+        "fyp_status": current_student.fyp_status
+    }
+
 
 
 # =========================

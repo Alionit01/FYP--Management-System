@@ -30,3 +30,15 @@ class TeamCreate(BaseModel):
 class StudentLogin(BaseModel):
     email: EmailStr
     password: str
+
+class StudentUpdate(BaseModel):
+    name: str
+    program: str
+    profile_picture: Optional[str] = None
+    bio: Optional[str] = None
+    github: Optional[str] = None
+    linkedin: Optional[str] = None
+    whatsapp: Optional[str] = None
+    skills: Optional[str] = None
+    interests: Optional[str] = None
+    fyp_status: Optional[str] = None
