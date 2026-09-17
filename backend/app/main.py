@@ -265,3 +265,54 @@ def get_teams():
     db.close()
 
     return result
+
+@app.get("/teams/{team_id}")
+def get_team(team_id: int):
+
+    db = database.SessionLocal()
+
+    team = db.query(models.Team).filter(
+        models.Team.id == team_id
+    ).first()
+
+    if not team:
+        db.close()
+        raise HTTPException(
+            status_code=404,
+            detail="Team not found"
+        )
+
+    # Find the team creator
+    creator = db.query(models.Student).filter(
+        models.Student.id == team.created_by
+    ).first()
+
+    # For now, the creator is the only team member
+    members = []
+
+    if creator:
+        members.append({
+            "id": creator.id,
+            "name": creator.name,
+            "program": creator.program,
+            "university_id": creator.university_id,
+            "profile_picture": creator.profile_picture
+        })
+
+    result = {
+        "id": team.id,
+        "name": team.name,
+        "project_title": team.project_title,
+        "description": team.description,
+        "department_preference": team.department_preference,
+        "spots_available": team.spots_available,
+        "skills_needed": team.skills_needed,
+        "roles_needed": team.roles_needed,
+        "contact": team.contact,
+        "created_by": team.created_by,
+        "members": members
+    }
+
+    db.close()
+
+    return result

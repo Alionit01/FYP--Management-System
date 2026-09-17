@@ -6,6 +6,7 @@ import Teams from "./pages/Teams";
 import StudentProfile from "./pages/StudentProfile";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import TeamProfile from "./pages/TeamProfile";
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="/students/:id" element={<StudentProfile />} />
 
         <Route path="/teams" element={<Teams />} />
+        <Route path="/teams/:id" element={<TeamProfile />} />
 
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
