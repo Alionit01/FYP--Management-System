@@ -332,7 +332,6 @@ def get_teams():
             "spots_available": team.spots_available,
             "skills_needed": team.skills_needed,
             "roles_needed": team.roles_needed,
-            "contact": team.contact,
             "created_by": team.created_by
         })
 
@@ -389,7 +388,6 @@ def get_team(team_id: int):
         "spots_available": team.spots_available,
         "skills_needed": team.skills_needed,
         "roles_needed": team.roles_needed,
-        "contact": team.contact,
         "created_by": team.created_by,
         "members": member_list
     }
@@ -577,3 +575,27 @@ def get_my_team(
     db.close()
 
     return result
+
+@app.get("/teams/{team_id}/contact")
+def get_team_contact(
+    team_id: int,
+    current_student=Depends(get_current_student)
+):
+    db = database.SessionLocal()
+
+    team = db.query(models.Team).filter(
+        models.Team.id == team_id
+    ).first()
+
+    db.close()
+
+    if not team:
+        raise HTTPException(
+            status_code=404,
+            detail="Team not found"
+        )
+
+    return {
+        "contact": team.contact
+    }
+

@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
 function TeamProfile() {
   const { id } = useParams();
+  const navigate = useNavigate();
 
   const [team, setTeam] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [contact, setContact] = useState(null);
+  const [contactLoading, setContactLoading] = useState(false);
 
   useEffect(() => {
     fetch(`http://127.0.0.1:8000/teams/${id}`)
@@ -26,6 +29,42 @@ function TeamProfile() {
         setLoading(false);
       });
   }, [id]);
+
+  const showContact = async () => {
+    const token = localStorage.getItem("access_token");
+
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    setContactLoading(true);
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/teams/${id}/contact`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.detail || "Failed to get contact"
+        );
+      }
+
+      setContact(data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setContactLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -171,19 +210,61 @@ function TeamProfile() {
         </section>
 
         {/* Contact */}
-        {team.contact && (
-          <section className="mt-8">
+        <section className="mt-8">
+          <h2 className="font-semibold">
+            Contact
+          </h2>
 
-            <h2 className="font-semibold">
-              Contact
-            </h2>
+          {!contact ? (
+            <>
+              <p className="mt-2 text-sm text-gray-500">
+                Contact information is available to logged-in
+                university students.
+              </p>
 
-            <p className="mt-2 text-gray-600">
-              {team.contact}
-            </p>
+              <button
+                onClick={showContact}
+                disabled={contactLoading}
+                className="mt-3 w-full border rounded-xl py-3 font-medium"
+              >
+                {contactLoading
+                  ? "Loading..."
+                  : "Show Contact Information"}
+              </button>
+            </>
+          ) : (
+            <div className="mt-3 space-y-2">
+              {contact.email && (
+                <a
+                  href={`mailto:${contact.email}`}
+                  className="block border rounded-xl p-3"
+                >
+                  📧 {contact.email}
+                </a>
+              )}
 
-          </section>
-        )}
+              {contact.whatsapp && (
+                <a
+                  href={`https://wa.me/${contact.whatsapp.replace(
+                    /\D/g,
+                    ""
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block border rounded-xl p-3"
+                >
+                  WhatsApp: {contact.whatsapp}
+                </a>
+              )}
+
+              {!contact.email && !contact.whatsapp && (
+                <p className="text-sm text-gray-500">
+                  No contact information provided.
+                </p>
+              )}
+            </div>
+          )}
+        </section>
 
       </div>
     </main>
