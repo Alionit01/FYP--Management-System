@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 function Students() {
   const [students, setStudents] = useState([]);
@@ -14,19 +15,22 @@ function Students() {
         setStudents(data);
         setLoading(false);
       })
-      .catch((error) => {
-        console.error(error);
+      .catch(() => {
         setLoading(false);
       });
   }, []);
 
   const filteredStudents = students.filter((student) => {
-    const searchText = search.toLowerCase();
+    const searchText = `
+      ${student.name}
+      ${student.skills || ""}
+      ${student.interests || ""}
+      ${student.program}
+    `.toLowerCase();
 
-    const matchesSearch =
-      student.name.toLowerCase().includes(searchText) ||
-      (student.skills || "").toLowerCase().includes(searchText) ||
-      (student.interests || "").toLowerCase().includes(searchText);
+    const matchesSearch = searchText.includes(
+      search.toLowerCase()
+    );
 
     const matchesProgram =
       program === "All" || student.program === program;
@@ -37,135 +41,198 @@ function Students() {
     return matchesSearch && matchesProgram && matchesStatus;
   });
 
-  if (loading) {
-    return (
-      <main className="max-w-6xl mx-auto px-4 py-8 pb-24">
-        <p className="text-gray-500">Loading students...</p>
-      </main>
-    );
-  }
-
   return (
-    <main className="max-w-6xl mx-auto px-4 py-8 pb-24">
-      <div>
-        <h1 className="text-3xl font-bold">Find Students</h1>
+    <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 pb-24 md:pb-10">
 
-        <p className="mt-2 text-gray-600">
-          Discover students by skills, interests, and program.
+      {/* Header */}
+      <div className="mb-8">
+        <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+          Directory
         </p>
-      </div>
 
-      {/* Search */}
-      <div className="mt-6">
-        <input
-          type="text"
-          placeholder="Search name, skill, or interest..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full border rounded-xl px-4 py-3 outline-none focus:ring-2"
-        />
+        <h1 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight">
+          Find Students
+        </h1>
+
+        <p className="mt-3 text-gray-600 max-w-2xl">
+          Browse students by program, skills, interests, and
+          FYP status.
+        </p>
       </div>
 
       {/* Filters */}
-      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <select
-          value={program}
-          onChange={(e) => setProgram(e.target.value)}
-          className="border rounded-xl px-4 py-3 bg-white"
-        >
-          <option value="All">All Programs</option>
-          <option value="BSCS">BSCS</option>
-          <option value="BSAI">BSAI</option>
-          <option value="BSCB">BSCB</option>
-          <option value="BSSE">BSSE</option>
-          <option value="BESE">BESE</option>
-        </select>
+      <section className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 mb-8">
 
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className="border rounded-xl px-4 py-3 bg-white"
-        >
-          <option value="All">All FYP Status</option>
-          <option value="Looking for a team">
-            Looking for a team
-          </option>
-          <option value="Already in a team">
-            Already in a team
-          </option>
-        </select>
+        <div className="grid gap-4 md:grid-cols-3">
+
+          <div className="md:col-span-1">
+            <label className="block text-sm font-medium mb-2">
+              Search
+            </label>
+
+            <input
+              type="text"
+              placeholder="Name, skills, interests..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Program
+            </label>
+
+            <select
+              value={program}
+              onChange={(e) => setProgram(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white outline-none focus:border-gray-900"
+            >
+              <option value="All">All Programs</option>
+              <option value="BS(CS)">BS(CS)</option>
+              <option value="BS(AI)">BS(AI)</option>
+              <option value="BS(CB)">BS(CB)</option>
+              <option value="BS(SE)">BS(SE)</option>
+              <option value="BE(SE)">BE(SE)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              FYP Status
+            </label>
+
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white outline-none focus:border-gray-900"
+            >
+              <option value="All">All Statuses</option>
+              <option value="Looking for a team">
+                Looking for a team
+              </option>
+              <option value="Already in a team">
+                Already in a team
+              </option>
+            </select>
+          </div>
+
+        </div>
+      </section>
+
+      {/* Results header */}
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-gray-500">
+          {filteredStudents.length}{" "}
+          {filteredStudents.length === 1
+            ? "student"
+            : "students"}
+        </p>
       </div>
 
-      {/* Results */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredStudents.map((student) => (
-          <div
-            key={student.id}
-            className="border rounded-2xl p-5 bg-white"
-          >
-            <div className="flex items-start gap-4">
-              {student.profile_picture ? (
-                <img
-                  src={student.profile_picture}
-                  alt={student.name}
-                  className="w-14 h-14 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center font-semibold">
-                  {student.name.charAt(0)}
+      {/* Loading */}
+      {loading && (
+        <div className="py-12 text-center text-gray-500">
+          Loading students...
+        </div>
+      )}
+
+      {/* Empty */}
+      {!loading && filteredStudents.length === 0 && (
+        <div className="border border-dashed border-gray-300 rounded-xl p-10 text-center">
+          <h2 className="font-semibold text-lg">
+            No students found
+          </h2>
+
+          <p className="mt-2 text-gray-500">
+            Try changing your search or filters.
+          </p>
+        </div>
+      )}
+
+      {/* Students */}
+      {!loading && filteredStudents.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+
+          {filteredStudents.map((student) => (
+            <article
+              key={student.id}
+              className="bg-white border border-gray-200 rounded-xl p-5 hover:border-gray-400 transition"
+            >
+
+              <div className="flex items-start gap-4">
+
+                {/* Avatar */}
+                {student.profile_picture ? (
+                  <img
+                    src={student.profile_picture}
+                    alt={student.name}
+                    className="w-12 h-12 rounded-full object-cover shrink-0"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center font-semibold text-gray-700 shrink-0">
+                    {student.name
+                      .charAt(0)
+                      .toUpperCase()}
+                  </div>
+                )}
+
+                <div className="min-w-0">
+                  <h2 className="font-semibold text-lg truncate">
+                    {student.name}
+                  </h2>
+
+                  <p className="text-sm text-gray-500">
+                    {student.program}
+                  </p>
+                </div>
+
+              </div>
+
+              {student.fyp_status && (
+                <span className="inline-block mt-4 text-xs font-medium border border-gray-200 rounded-full px-3 py-1">
+                  {student.fyp_status}
+                </span>
+              )}
+
+              {student.skills && (
+                <div className="mt-4">
+                  <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
+                    Skills
+                  </p>
+
+                  <p className="mt-1 text-sm text-gray-600 line-clamp-2">
+                    {student.skills}
+                  </p>
                 </div>
               )}
 
-              <div className="min-w-0">
-                <h2 className="font-semibold text-lg">
-                  {student.name}
-                </h2>
+              {student.interests && (
+                <div className="mt-3">
+                  <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
+                    Interests
+                  </p>
 
-                <p className="text-sm text-gray-500">
-                  {student.program} · {student.university_id}
-                </p>
-              </div>
-            </div>
+                  <p className="mt-1 text-sm text-gray-600 line-clamp-2">
+                    {student.interests}
+                  </p>
+                </div>
+              )}
 
-            {student.skills && (
-              <p className="mt-4 text-sm text-gray-700">
-                <span className="font-medium">Skills:</span>{" "}
-                {student.skills}
-              </p>
-            )}
+              <Link
+                to={`/students/${student.id}`}
+                className="block mt-5 text-center border border-gray-300 rounded-lg py-2.5 text-sm font-medium hover:bg-gray-50 transition"
+              >
+                View Profile
+              </Link>
 
-            {student.interests && (
-              <p className="mt-2 text-sm text-gray-700">
-                <span className="font-medium">Interests:</span>{" "}
-                {student.interests}
-              </p>
-            )}
+            </article>
+          ))}
 
-            {student.fyp_status && (
-              <div className="mt-4">
-                <span className="text-xs border rounded-full px-3 py-1">
-                  {student.fyp_status}
-                </span>
-              </div>
-            )}
-
-            <button
-              className="mt-5 w-full border rounded-xl py-2.5 font-medium"
-              onClick={() =>
-                (window.location.href = `/students/${student.id}`)
-              }
-            >
-              View Profile
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {filteredStudents.length === 0 && (
-        <p className="text-center text-gray-500 mt-12">
-          No students found.
-        </p>
+        </div>
       )}
+
     </main>
   );
 }

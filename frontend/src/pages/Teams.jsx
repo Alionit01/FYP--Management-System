@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 function Teams() {
-  const navigate = useNavigate();
-
   const [teams, setTeams] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [program, setProgram] = useState("All");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("http://127.0.0.1:8000/teams")
@@ -16,21 +14,23 @@ function Teams() {
         setTeams(data);
         setLoading(false);
       })
-      .catch((error) => {
-        console.error(error);
+      .catch(() => {
         setLoading(false);
       });
   }, []);
 
   const filteredTeams = teams.filter((team) => {
-    const searchText = search.toLowerCase();
+    const searchText = `
+      ${team.name}
+      ${team.project_title || ""}
+      ${team.description || ""}
+      ${team.skills_needed || ""}
+      ${team.roles_needed || ""}
+    `.toLowerCase();
 
-    const matchesSearch =
-      team.name.toLowerCase().includes(searchText) ||
-      (team.project_title || "").toLowerCase().includes(searchText) ||
-      (team.description || "").toLowerCase().includes(searchText) ||
-      (team.skills_needed || "").toLowerCase().includes(searchText) ||
-      (team.roles_needed || "").toLowerCase().includes(searchText);
+    const matchesSearch = searchText.includes(
+      search.toLowerCase()
+    );
 
     const matchesProgram =
       program === "All" ||
@@ -40,136 +40,187 @@ function Teams() {
     return matchesSearch && matchesProgram;
   });
 
-  if (loading) {
-    return (
-      <main className="max-w-6xl mx-auto px-4 py-8 pb-24">
-        <p className="text-gray-500">Loading teams...</p>
-      </main>
-    );
-  }
-
   return (
-    <main className="max-w-6xl mx-auto px-4 py-8 pb-24">
+    <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 pb-24 md:pb-10">
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-  <div>
-    <h1 className="text-3xl font-bold">
-      Find Teams
-    </h1>
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-8">
+        <div>
+          <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+            Directory
+          </p>
 
-    <p className="mt-2 text-gray-600">
-      Explore FYP teams looking for members.
-    </p>
-  </div>
+          <h1 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight">
+            Find a Team
+          </h1>
 
-  <button
-    onClick={() => navigate("/teams/create")}
-    className="w-full sm:w-auto bg-black text-white px-5 py-3 rounded-xl font-medium"
-  >
-    Create Team
-  </button>
-</div>
+          <p className="mt-3 text-gray-600 max-w-2xl">
+            Explore FYP teams, see what they are building, and
+            find out which skills and roles they need.
+          </p>
+        </div>
 
-      {/* Search */}
-      <div className="mt-6">
-        <input
-          type="text"
-          placeholder="Search teams, projects, skills..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full border rounded-xl px-4 py-3 outline-none focus:ring-2"
-        />
-      </div>
-
-      {/* Filter */}
-      <div className="mt-3">
-        <select
-          value={program}
-          onChange={(e) => setProgram(e.target.value)}
-          className="w-full sm:w-auto border rounded-xl px-4 py-3 bg-white"
+        <Link
+          to="/teams/create"
+          className="inline-flex items-center justify-center bg-gray-900 text-white px-5 py-3 rounded-lg font-medium text-sm hover:bg-gray-800 transition shrink-0"
         >
-          <option value="All">All Programs</option>
-          <option value="BSCS">BSCS</option>
-          <option value="BSAI">BSAI</option>
-          <option value="BSCB">BSCB</option>
-          <option value="BSSE">BSSE</option>
-          <option value="BESE">BESE</option>
-        </select>
+          Create Team
+        </Link>
       </div>
+
+      {/* Filters */}
+      <section className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 mb-8">
+        <div className="grid gap-4 md:grid-cols-3">
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium mb-2">
+              Search
+            </label>
+
+            <input
+              type="text"
+              placeholder="Team name, project, skills, roles..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Department
+            </label>
+
+            <select
+              value={program}
+              onChange={(e) => setProgram(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white outline-none focus:border-gray-900"
+            >
+              <option value="All">All Departments</option>
+              <option value="BS(CS)">BS(CS)</option>
+              <option value="BS(AI)">BS(AI)</option>
+              <option value="BS(CB)">BS(CB)</option>
+              <option value="BS(SE)">BS(SE)</option>
+              <option value="BE(SE)">BE(SE)</option>
+            </select>
+          </div>
+
+        </div>
+      </section>
+
+      {/* Result count */}
+      <div className="mb-4">
+        <p className="text-sm text-gray-500">
+          {filteredTeams.length}{" "}
+          {filteredTeams.length === 1 ? "team" : "teams"}
+        </p>
+      </div>
+
+      {/* Loading */}
+      {loading && (
+        <div className="py-12 text-center text-gray-500">
+          Loading teams...
+        </div>
+      )}
+
+      {/* Empty */}
+      {!loading && filteredTeams.length === 0 && (
+        <div className="border border-dashed border-gray-300 rounded-xl p-10 text-center">
+          <h2 className="font-semibold text-lg">
+            No teams found
+          </h2>
+
+          <p className="mt-2 text-gray-500">
+            Try changing your search or department filter.
+          </p>
+        </div>
+      )}
 
       {/* Teams */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredTeams.map((team) => (
-          <div
-            key={team.id}
-            className="border rounded-2xl p-5 bg-white"
-          >
-            <div className="flex items-start justify-between gap-4">
+      {!loading && filteredTeams.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 
-              <div className="min-w-0">
-                <h2 className="text-lg font-semibold">
-                  {team.name}
-                </h2>
+          {filteredTeams.map((team) => (
+            <article
+              key={team.id}
+              className="bg-white border border-gray-200 rounded-xl p-5 hover:border-gray-400 transition flex flex-col"
+            >
 
-                <p className="text-sm text-gray-500 mt-1">
-                  {team.project_title || "Project not decided yet"}
-                </p>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="text-lg font-semibold truncate">
+                    {team.name}
+                  </h2>
+
+                  <p className="text-sm text-gray-500 mt-1">
+                    {team.department_preference === "Any"
+                      ? "Open to all departments"
+                      : team.department_preference}
+                  </p>
+                </div>
+
+                <span
+                  className={`text-xs font-medium px-2.5 py-1 rounded-full border shrink-0 ${
+                    team.spots_available > 0
+                      ? "border-gray-200 text-gray-600"
+                      : "border-gray-300 text-gray-400"
+                  }`}
+                >
+                  {team.spots_available > 0
+                    ? `${team.spots_available} spot${
+                        team.spots_available === 1 ? "" : "s"
+                      }`
+                    : "Full"}
+                </span>
               </div>
 
-              <span className="shrink-0 text-xs border rounded-full px-3 py-1">
-                {team.spots_available} spots
-              </span>
+              {team.project_title && (
+                <h3 className="mt-5 font-medium">
+                  {team.project_title}
+                </h3>
+              )}
 
-            </div>
-
-            {team.description && (
-              <p className="mt-4 text-sm text-gray-600">
-                {team.description}
-              </p>
-            )}
-
-            <div className="mt-4 space-y-2 text-sm">
-              <p>
-                <span className="font-medium">
-                  Department:
-                </span>{" "}
-                {team.department_preference}
-              </p>
+              {team.description && (
+                <p className="mt-2 text-sm text-gray-600 leading-relaxed line-clamp-3">
+                  {team.description}
+                </p>
+              )}
 
               {team.skills_needed && (
-                <p>
-                  <span className="font-medium">
-                    Skills:
-                  </span>{" "}
-                  {team.skills_needed}
-                </p>
+                <div className="mt-5">
+                  <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
+                    Skills needed
+                  </p>
+
+                  <p className="mt-1 text-sm text-gray-600 line-clamp-2">
+                    {team.skills_needed}
+                  </p>
+                </div>
               )}
 
               {team.roles_needed && (
-                <p>
-                  <span className="font-medium">
-                    Looking for:
-                  </span>{" "}
-                  {team.roles_needed}
-                </p>
+                <div className="mt-3">
+                  <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
+                    Roles
+                  </p>
+
+                  <p className="mt-1 text-sm text-gray-600 line-clamp-2">
+                    {team.roles_needed}
+                  </p>
+                </div>
               )}
-            </div>
 
-            <button
-              onClick={() => navigate(`/teams/${team.id}`)}
-              className="mt-5 w-full border rounded-xl py-2.5 font-medium"
-            >
-              View Team
-            </button>
-          </div>
-        ))}
-      </div>
+              <Link
+                to={`/teams/${team.id}`}
+                className="block mt-5 text-center border border-gray-300 rounded-lg py-2.5 text-sm font-medium hover:bg-gray-50 transition"
+              >
+                View Team
+              </Link>
 
-      {filteredTeams.length === 0 && (
-        <p className="text-center text-gray-500 mt-12">
-          No teams found.
-        </p>
+            </article>
+          ))}
+
+        </div>
       )}
 
     </main>

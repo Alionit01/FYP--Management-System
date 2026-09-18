@@ -3,206 +3,293 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 
 function StudentProfile() {
   const { id } = useParams();
-  const [student, setStudent] = useState(null);
-  const [loading, setLoading] = useState(true);
-
   const navigate = useNavigate();
 
+  const [student, setStudent] = useState(null);
   const [contact, setContact] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [contactLoading, setContactLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const showContact = async () => {
   const token = localStorage.getItem("access_token");
-
-  if (!token) {
-    navigate("/login");
-    return;
-  }
-
-  setContactLoading(true);
-
-  try {
-    const response = await fetch(
-      `http://127.0.0.1:8000/students/${id}/contact`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data.detail || "Failed to get contact"
-      );
-    }
-
-    setContact(data);
-  } catch (error) {
-    console.error(error);
-  } finally {
-    setContactLoading(false);
-  }
-  };
 
   useEffect(() => {
     fetch(`http://127.0.0.1:8000/students/${id}`)
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Student not found");
+        }
+
+        return response.json();
+      })
       .then((data) => {
         setStudent(data);
         setLoading(false);
       })
-      .catch((error) => {
-        console.error(error);
+      .catch(() => {
+        setError("Student could not be found.");
         setLoading(false);
       });
   }, [id]);
 
+  const showContact = async () => {
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    setContactLoading(true);
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/students/${id}/contact`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.detail || "Could not load contact information.");
+        return;
+      }
+
+      setContact(data);
+    } catch {
+      setError("Could not load contact information.");
+    } finally {
+      setContactLoading(false);
+    }
+  };
+
   if (loading) {
-    return <main className="p-6">Loading...</main>;
+    return (
+      <main className="max-w-4xl mx-auto px-4 py-10 pb-24 md:pb-10">
+        <p className="text-gray-500">Loading profile...</p>
+      </main>
+    );
   }
 
   if (!student) {
-    return <main className="p-6">Student not found.</main>;
+    return (
+      <main className="max-w-4xl mx-auto px-4 py-10 pb-24 md:pb-10">
+        <div className="border border-gray-200 rounded-xl p-8 text-center">
+          <h1 className="text-xl font-semibold">
+            Student not found
+          </h1>
+
+          <p className="mt-2 text-gray-500">
+            {error}
+          </p>
+
+          <Link
+            to="/students"
+            className="inline-block mt-5 bg-gray-900 text-white px-5 py-2.5 rounded-lg"
+          >
+            Back to Students
+          </Link>
+        </div>
+      </main>
+    );
   }
 
   return (
-    <main className="max-w-3xl mx-auto px-4 py-8 pb-24">
-      <Link to="/students" className="text-sm text-gray-500">
+    <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 pb-24 md:pb-10">
+
+      {/* Back */}
+      <Link
+        to="/students"
+        className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 mb-8"
+      >
         ← Back to Students
       </Link>
 
-      <div className="mt-6 border rounded-2xl p-6 bg-white">
-        <div className="flex flex-col items-center text-center">
+      {/* Profile header */}
+      <section className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8">
+
+        <div className="flex flex-col sm:flex-row sm:items-start gap-5">
+
           {student.profile_picture ? (
             <img
               src={student.profile_picture}
               alt={student.name}
-              className="w-24 h-24 rounded-full object-cover"
+              className="w-20 h-20 rounded-full object-cover"
             />
           ) : (
-            <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center text-3xl font-bold">
-              {student.name.charAt(0)}
+            <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center text-2xl font-semibold">
+              {student.name.charAt(0).toUpperCase()}
             </div>
           )}
 
-          <h1 className="text-2xl font-bold mt-4">
-            {student.name}
-          </h1>
+          <div className="flex-1">
 
-          <p className="text-gray-500 mt-1">
-            {student.program} · {student.university_id}
-          </p>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <h1 className="text-3xl font-bold tracking-tight">
+                {student.name}
+              </h1>
 
-          {student.fyp_status && (
-            <span className="mt-3 border rounded-full px-3 py-1 text-sm">
-              {student.fyp_status}
-            </span>
-          )}
+              {student.fyp_status && (
+                <span className="w-fit text-xs font-medium border border-gray-200 rounded-full px-3 py-1">
+                  {student.fyp_status}
+                </span>
+              )}
+            </div>
+
+            <p className="mt-2 text-gray-500">
+              {student.program}
+            </p>
+
+            <p className="mt-1 text-sm text-gray-400">
+              {student.university_id}
+            </p>
+
+          </div>
+
         </div>
 
+        {/* Bio */}
         {student.bio && (
-          <section className="mt-8">
-            <h2 className="font-semibold">About</h2>
-            <p className="mt-2 text-gray-600">{student.bio}</p>
-          </section>
+          <div className="mt-8">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400">
+              About
+            </h2>
+
+            <p className="mt-2 text-gray-600 leading-relaxed">
+              {student.bio}
+            </p>
+          </div>
         )}
 
+        {/* Skills */}
         {student.skills && (
-          <section className="mt-6">
-            <h2 className="font-semibold">Skills</h2>
-            <p className="mt-2 text-gray-600">{student.skills}</p>
-          </section>
+          <div className="mt-7">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400">
+              Skills
+            </h2>
+
+            <p className="mt-2 text-gray-700 leading-relaxed">
+              {student.skills}
+            </p>
+          </div>
         )}
 
+        {/* Interests */}
         {student.interests && (
-          <section className="mt-6">
-            <h2 className="font-semibold">Interests</h2>
-            <p className="mt-2 text-gray-600">{student.interests}</p>
-          </section>
+          <div className="mt-7">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400">
+              Interests
+            </h2>
+
+            <p className="mt-2 text-gray-700 leading-relaxed">
+              {student.interests}
+            </p>
+          </div>
         )}
 
-        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {student.github && (
-            <a
-              href={student.github}
-              target="_blank"
-              rel="noreferrer"
-              className="border rounded-xl py-3 text-center"
-            >
-              GitHub
-            </a>
+        {/* Links */}
+        {(student.github || student.linkedin) && (
+          <div className="mt-7 flex flex-wrap gap-3">
+
+            {student.github && (
+              <a
+                href={student.github}
+                target="_blank"
+                rel="noreferrer"
+                className="border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-50"
+              >
+                GitHub
+              </a>
+            )}
+
+            {student.linkedin && (
+              <a
+                href={student.linkedin}
+                target="_blank"
+                rel="noreferrer"
+                className="border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-50"
+              >
+                LinkedIn
+              </a>
+            )}
+
+          </div>
+        )}
+
+        {/* Contact */}
+        <div className="mt-8 pt-7 border-t border-gray-200">
+
+          {!contact ? (
+            <div>
+              <h2 className="font-semibold">
+                Want to contact {student.name.split(" ")[0]}?
+              </h2>
+
+              <p className="text-sm text-gray-500 mt-1 mb-4">
+                Contact information is only available to logged-in students.
+              </p>
+
+              <button
+                onClick={showContact}
+                disabled={contactLoading}
+                className="bg-gray-900 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
+              >
+                {contactLoading
+                  ? "Loading..."
+                  : "Show Contact Information"}
+              </button>
+            </div>
+          ) : (
+            <div>
+              <h2 className="font-semibold mb-4">
+                Contact Information
+              </h2>
+
+              <div className="flex flex-col gap-3">
+
+                {contact.email && (
+                  <a
+                    href={`mailto:${contact.email}`}
+                    className="border border-gray-200 rounded-lg px-4 py-3 hover:bg-gray-50"
+                  >
+                    <span className="text-xs text-gray-400 block">
+                      Email
+                    </span>
+                    <span className="text-sm font-medium">
+                      {contact.email}
+                    </span>
+                  </a>
+                )}
+
+                {contact.whatsapp && (
+                  <a
+                    href={`https://wa.me/${contact.whatsapp.replace(
+                      /\D/g,
+                      ""
+                    )}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="border border-gray-200 rounded-lg px-4 py-3 hover:bg-gray-50"
+                  >
+                    <span className="text-xs text-gray-400 block">
+                      WhatsApp
+                    </span>
+                    <span className="text-sm font-medium">
+                      {contact.whatsapp}
+                    </span>
+                  </a>
+                )}
+
+              </div>
+            </div>
           )}
 
-          {student.linkedin && (
-            <a
-              href={student.linkedin}
-              target="_blank"
-              rel="noreferrer"
-              className="border rounded-xl py-3 text-center"
-            >
-              LinkedIn
-            </a>
-          )}
-          <section className="mt-8">
-  <h2 className="font-semibold">
-    Contact
-  </h2>
-
-  {!contact ? (
-    <>
-      <p className="mt-2 text-sm text-gray-500">
-        Contact information is available to logged-in
-        university students.
-      </p>
-
-      <button
-        onClick={showContact}
-        disabled={contactLoading}
-        className="mt-3 w-full border rounded-xl py-3 font-medium"
-      >
-        {contactLoading
-          ? "Loading..."
-          : "Show Contact Information"}
-      </button>
-    </>
-  ) : (
-    <div className="mt-3 space-y-2">
-      {contact.email && (
-        <a
-          href={`mailto:${contact.email}`}
-          className="block border rounded-xl p-3"
-        >
-          📧 {contact.email}
-        </a>
-      )}
-
-      {contact.whatsapp && (
-        <a
-          href={`https://wa.me/${contact.whatsapp.replace(
-            /\D/g,
-            ""
-          )}`}
-          target="_blank"
-          rel="noreferrer"
-          className="block border rounded-xl p-3"
-        >
-          WhatsApp: {contact.whatsapp}
-        </a>
-      )}
-
-      {!contact.email && !contact.whatsapp && (
-        <p className="text-sm text-gray-500">
-          No contact information provided.
-        </p>
-      )}
-    </div>
-  )}
-</section>
         </div>
-      </div>
+
+      </section>
+
     </main>
   );
 }
