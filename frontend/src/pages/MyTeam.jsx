@@ -5,225 +5,372 @@ function MyTeam() {
   const navigate = useNavigate();
 
   const [team, setTeam] = useState(null);
+  const [students, setStudents] = useState([]);
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  const token = localStorage.getItem("access_token");
+  const currentStudentId = Number(localStorage.getItem("student_id"));
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
-
     if (!token) {
       navigate("/login");
       return;
     }
 
-    fetch("http://127.0.0.1:8000/my-team", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then(async (response) => {
-        const data = await response.json();
+    fetchMyTeam();
+    fetchStudents();
+  }, []);
 
-        if (!response.ok) {
-          throw new Error(
-            data.detail || "Failed to load team"
-          );
+  const fetchMyTeam = async () => {
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/my-team",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
+      );
 
-        return data;
-      })
-      .then((data) => {
-        setTeam(data);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error(error);
-        setError(error.message);
-        setLoading(false);
-      });
-  }, [navigate]);
+      if (!response.ok) {
+        throw new Error("Failed to load team");
+      }
+
+      const data = await response.json();
+      setTeam(data);
+    } catch (error) {
+      setMessage("Could not load your team.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchStudents = async () => {
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/students"
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to load students");
+      }
+
+      const data = await response.json();
+      setStudents(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const addMember = async (studentId) => {
+    setMessage("");
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/teams/${team.id}/members/${studentId}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMessage(data.detail || "Could not add student.");
+        return;
+      }
+
+      setMessage("Student added successfully.");
+      fetchMyTeam();
+    } catch (error) {
+      setMessage("Something went wrong.");
+    }
+  };
+
+  const removeMember = async (studentId) => {
+    setMessage("");
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/teams/${team.id}/members/${studentId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMessage(data.detail || "Could not remove student.");
+        return;
+      }
+
+      setMessage("Student removed from team.");
+      fetchMyTeam();
+    } catch (error) {
+      setMessage("Something went wrong.");
+    }
+  };
 
   if (loading) {
     return (
-      <main className="max-w-3xl mx-auto px-4 py-8 pb-24">
-        <p className="text-gray-500">
-          Loading your team...
-        </p>
-      </main>
-    );
-  }
-
-  if (error) {
-    return (
-      <main className="max-w-3xl mx-auto px-4 py-8 pb-24">
-        <p className="text-red-600">{error}</p>
+      <main className="max-w-6xl mx-auto px-4 py-10">
+        <p>Loading...</p>
       </main>
     );
   }
 
   if (!team) {
     return (
-      <main className="max-w-3xl mx-auto px-4 py-8 pb-24">
-        <div className="border rounded-2xl p-6 bg-white">
-          <h1 className="text-2xl font-bold">
+      <main className="max-w-6xl mx-auto px-4 py-10">
+        <div className="max-w-xl">
+          <h1 className="text-3xl font-bold mb-3">
             You are not in a team yet
           </h1>
 
-          <p className="mt-2 text-gray-600">
-            Create your own team or explore existing teams.
+          <p className="text-gray-600 mb-6">
+            Create a team or explore existing teams.
           </p>
 
-          <div className="mt-6 flex flex-col sm:flex-row gap-3">
-            <button
-              onClick={() => navigate("/teams/create")}
-              className="bg-black text-white px-5 py-3 rounded-xl font-medium"
+          <div className="flex gap-3">
+            <Link
+              to="/teams/create"
+              className="bg-black text-white px-5 py-3 rounded-lg"
             >
               Create Team
-            </button>
+            </Link>
 
-            <button
-              onClick={() => navigate("/teams")}
-              className="border px-5 py-3 rounded-xl font-medium"
+            <Link
+              to="/teams"
+              className="border px-5 py-3 rounded-lg"
             >
               Explore Teams
-            </button>
+            </Link>
           </div>
         </div>
       </main>
     );
   }
 
+  const isOwner = team.created_by === currentStudentId;
+
+  const memberIds = team.members.map(
+    (member) => member.id
+  );
+
+  const filteredStudents = students.filter((student) => {
+    const text = `
+      ${student.name}
+      ${student.program}
+      ${student.skills || ""}
+      ${student.interests || ""}
+    `.toLowerCase();
+
+    return (
+      text.includes(search.toLowerCase()) &&
+      !memberIds.includes(student.id) &&
+      student.id !== currentStudentId
+    );
+  });
+
   return (
-    <main className="max-w-3xl mx-auto px-4 py-8 pb-24">
-      <div>
-        <p className="text-sm text-gray-500">
-          My Team
-        </p>
+    <main className="max-w-6xl mx-auto px-4 py-8 pb-24">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-8">
+        <div>
+          <p className="text-sm text-gray-500 mb-1">
+            My Team
+          </p>
 
-        <h1 className="text-3xl font-bold mt-1">
-          {team.name}
-        </h1>
+          <h1 className="text-3xl font-bold">
+            {team.name}
+          </h1>
 
-        <p className="mt-2 text-gray-600">
-          {team.project_title ||
-            "Project not decided yet"}
-        </p>
+          {team.project_title && (
+            <p className="text-gray-600 mt-2">
+              {team.project_title}
+            </p>
+          )}
+        </div>
+
+        <Link
+          to={`/teams/${team.id}`}
+          className="border px-4 py-2 rounded-lg text-center"
+        >
+          View Public Profile
+        </Link>
       </div>
 
-      <div className="mt-8 border rounded-2xl p-6 bg-white">
-        {team.description && (
-          <section>
-            <h2 className="font-semibold">
-              About the Project
-            </h2>
+      {message && (
+        <div className="mb-6 bg-gray-100 border rounded-lg px-4 py-3">
+          {message}
+        </div>
+      )}
 
-            <p className="mt-2 text-gray-600">
-              {team.description}
+      <section className="border rounded-xl p-5 mb-8">
+        <h2 className="text-xl font-semibold mb-4">
+          Team Information
+        </h2>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <p className="text-sm text-gray-500">
+              Department
             </p>
-          </section>
-        )}
-
-        <section className="mt-6">
-          <h2 className="font-semibold">
-            Team Information
-          </h2>
-
-          <div className="mt-3 space-y-2 text-sm text-gray-600">
-            <p>
-              <span className="font-medium text-gray-900">
-                Department:
-              </span>{" "}
+            <p className="font-medium">
               {team.department_preference}
             </p>
+          </div>
 
-            <p>
-              <span className="font-medium text-gray-900">
-                Available spots:
-              </span>{" "}
+          <div>
+            <p className="text-sm text-gray-500">
+              Available Spots
+            </p>
+            <p className="font-medium">
               {team.spots_available}
             </p>
-
-            {team.skills_needed && (
-              <p>
-                <span className="font-medium text-gray-900">
-                  Skills needed:
-                </span>{" "}
-                {team.skills_needed}
-              </p>
-            )}
-
-            {team.roles_needed && (
-              <p>
-                <span className="font-medium text-gray-900">
-                  Roles needed:
-                </span>{" "}
-                {team.roles_needed}
-              </p>
-            )}
           </div>
-        </section>
 
-        <section className="mt-8">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold">
+          <div>
+            <p className="text-sm text-gray-500">
               Members
-            </h2>
-
-            <span className="text-sm text-gray-500">
-              {team.members.length} member
-              {team.members.length !== 1 ? "s" : ""}
-            </span>
+            </p>
+            <p className="font-medium">
+              {team.members.length}
+            </p>
           </div>
 
-          <div className="mt-3 space-y-3">
-            {team.members.map((member) => (
-              <Link
-                key={member.id}
-                to={`/students/${member.id}`}
-                className="flex items-center gap-3 border rounded-xl p-3"
-              >
-                {member.profile_picture ? (
-                  <img
-                    src={member.profile_picture}
-                    alt={member.name}
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-semibold">
-                    {member.name.charAt(0)}
-                  </div>
-                )}
-
-                <div>
-                  <p className="font-medium">
-                    {member.name}
-                  </p>
-
-                  <p className="text-sm text-gray-500">
-                    {member.program} ·{" "}
-                    {member.university_id}
-                  </p>
-                </div>
-
-                {member.id === team.created_by && (
-                  <span className="ml-auto text-xs border rounded-full px-2 py-1">
-                    Owner
-                  </span>
-                )}
-              </Link>
-            ))}
+          <div>
+            <p className="text-sm text-gray-500">
+              Owner
+            </p>
+            <p className="font-medium">
+              {team.members.find(
+                (member) => member.id === team.created_by
+              )?.name || "You"}
+            </p>
           </div>
-        </section>
-
-        <div className="mt-8">
-          <button
-            onClick={() => navigate(`/teams/${team.id}`)}
-            className="w-full border rounded-xl py-3 font-medium"
-          >
-            View Public Team Profile
-          </button>
         </div>
-      </div>
+      </section>
+
+      <section className="mb-8">
+        <h2 className="text-xl font-semibold mb-4">
+          Team Members
+        </h2>
+
+        <div className="grid gap-3">
+          {team.members.map((member) => (
+            <div
+              key={member.id}
+              className="border rounded-xl p-4 flex items-center justify-between gap-4"
+            >
+              <div>
+                <Link
+                  to={`/students/${member.id}`}
+                  className="font-semibold hover:underline"
+                >
+                  {member.name}
+                </Link>
+
+                <p className="text-sm text-gray-500">
+                  {member.program}
+                </p>
+              </div>
+
+              {isOwner && member.id !== team.created_by && (
+                <button
+                  onClick={() => removeMember(member.id)}
+                  className="text-sm border border-red-300 text-red-600 px-3 py-2 rounded-lg"
+                >
+                  Remove
+                </button>
+              )}
+
+              {member.id === team.created_by && (
+                <span className="text-sm text-gray-500">
+                  Owner
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {isOwner && (
+        <section className="border rounded-xl p-5">
+          <h2 className="text-xl font-semibold mb-2">
+            Add Team Members
+          </h2>
+
+          <p className="text-sm text-gray-500 mb-4">
+            Search students and add them to your team.
+          </p>
+
+          {team.spots_available <= 0 ? (
+            <div className="bg-gray-100 rounded-lg p-4">
+              Your team is currently full.
+            </div>
+          ) : (
+            <>
+              <input
+                type="text"
+                placeholder="Search by name, program, skills..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full border rounded-lg px-4 py-3 mb-4"
+              />
+
+              <div className="grid gap-3">
+                {filteredStudents.slice(0, 10).map((student) => (
+                  <div
+                    key={student.id}
+                    className="border rounded-xl p-4 flex items-center justify-between gap-4"
+                  >
+                    <div className="min-w-0">
+                      <Link
+                        to={`/students/${student.id}`}
+                        className="font-semibold hover:underline"
+                      >
+                        {student.name}
+                      </Link>
+
+                      <p className="text-sm text-gray-500">
+                        {student.program}
+                      </p>
+
+                      {student.skills && (
+                        <p className="text-sm text-gray-600 mt-1 truncate">
+                          {student.skills}
+                        </p>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => addMember(student.id)}
+                      className="bg-black text-white px-4 py-2 rounded-lg text-sm shrink-0"
+                    >
+                      Add
+                    </button>
+                  </div>
+                ))}
+
+                {filteredStudents.length === 0 && (
+                  <p className="text-gray-500">
+                    No available students found.
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+        </section>
+      )}
     </main>
   );
 }

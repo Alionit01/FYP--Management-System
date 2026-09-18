@@ -599,3 +599,146 @@ def get_team_contact(
         "contact": team.contact
     }
 
+@app.post("/teams/{team_id}/members/{student_id}")
+def add_team_member(
+    team_id: int,
+    student_id: int,
+    current_student: models.Student = Depends(get_current_student)
+):
+    db = database.SessionLocal()
+
+    team = db.query(models.Team).filter(
+        models.Team.id == team_id
+    ).first()
+
+    if not team:
+        db.close()
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    # Only the owner can add members
+    if team.created_by != current_student.id:
+        db.close()
+        raise HTTPException(
+            status_code=403,
+            detail="Only the team owner can add members"
+        )
+
+    student = db.query(models.Student).filter(
+        models.Student.id == student_id
+    ).first()
+
+    if not student:
+        db.close()
+        raise HTTPException(
+            status_code=404,
+            detail="Student not found"
+        )
+
+    # Check whether already in this team
+    existing_membership = db.query(models.TeamMember).filter(
+        models.TeamMember.team_id == team_id,
+        models.TeamMember.student_id == student_id
+    ).first()
+
+    if existing_membership:
+        db.close()
+        raise HTTPException(
+            status_code=400,
+            detail="Student is already a member of this team"
+        )
+
+    # Check whether student is already in another team
+    existing_team = db.query(models.TeamMember).filter(
+        models.TeamMember.student_id == student_id
+    ).first()
+
+    if existing_team:
+        db.close()
+        raise HTTPException(
+            status_code=400,
+            detail="Student is already a member of another team"
+        )
+
+    # Check available spots
+    if team.spots_available <= 0:
+        db.close()
+        raise HTTPException(
+            status_code=400,
+            detail="This team has no available spots"
+        )
+
+    membership = models.TeamMember(
+        team_id=team_id,
+        student_id=student_id
+    )
+
+    db.add(membership)
+
+    team.spots_available -= 1
+
+    db.commit()
+    db.refresh(team)
+
+    db.close()
+
+    return {
+        "message": "Student added to team",
+        "spots_available": team.spots_available
+    }
+
+@app.delete("/teams/{team_id}/members/{student_id}")
+def remove_team_member(
+    team_id: int,
+    student_id: int,
+    current_student: models.Student = Depends(get_current_student)
+):
+    db = database.SessionLocal()
+
+    team = db.query(models.Team).filter(
+        models.Team.id == team_id
+    ).first()
+
+    if not team:
+        db.close()
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    # Only the team owner can remove members
+    if team.created_by != current_student.id:
+        db.close()
+        raise HTTPException(
+            status_code=403,
+            detail="Only the team owner can remove members"
+        )
+
+    # Owner cannot remove themselves
+    if student_id == team.created_by:
+        db.close()
+        raise HTTPException(
+            status_code=400,
+            detail="Team owner cannot be removed"
+        )
+
+    membership = db.query(models.TeamMember).filter(
+        models.TeamMember.team_id == team_id,
+        models.TeamMember.student_id == student_id
+    ).first()
+
+    if not membership:
+        db.close()
+        raise HTTPException(
+            status_code=404,
+            detail="Student is not a member of this team"
+        )
+
+    db.delete(membership)
+
+    # One spot becomes available again
+    team.spots_available += 1
+
+    db.commit()
+    db.close()
+
+    return {
+        "message": "Student removed from team",
+        "spots_available": team.spots_available
+    }
