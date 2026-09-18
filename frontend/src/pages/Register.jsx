@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 function Register() {
   const navigate = useNavigate();
@@ -9,9 +9,10 @@ function Register() {
     university_id: "",
     email: "",
     password: "",
-    program: "BSCS",
+    program: "BS(CS)",
   });
 
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -26,117 +27,202 @@ function Register() {
     e.preventDefault();
 
     setError("");
+
+    if (form.password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/students", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(form),
-      });
+      const response = await fetch(
+        "http://127.0.0.1:8000/students",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(form),
+        }
+      );
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.detail || "Registration failed");
+        setError(data.detail || "Could not create your account.");
+        return;
       }
 
-      navigate("/login");
-    } catch (error) {
-      setError(error.message);
+      navigate("/login", {
+        state: {
+          registered: true,
+        },
+      });
+    } catch {
+      setError("Could not connect to the server.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="min-h-screen px-4 py-8 pb-24">
-      <div className="max-w-md mx-auto">
-        <h1 className="text-3xl font-bold">Create Account</h1>
+    <main className="min-h-[calc(100vh-56px)] md:min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-10 pb-24 md:pb-10">
+      <div className="w-full max-w-lg">
+        <div className="text-center mb-8">
+          <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+            FYP Finder
+          </p>
 
-        <p className="mt-2 text-gray-600">
-          Register using your university email.
-        </p>
+          <h1 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight">
+            Create your account
+          </h1>
 
-        {error && (
-          <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-            {error}
+          <p className="mt-3 text-gray-600">
+            Use your university email to join FYP Finder.
+          </p>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8"
+        >
+          <div className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Full Name *
+              </label>
+
+              <input
+                type="text"
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                required
+                autoComplete="name"
+                placeholder="Your full name"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+              />
+            </div>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  University ID *
+                </label>
+
+                <input
+                  type="text"
+                  name="university_id"
+                  value={form.university_id}
+                  onChange={handleChange}
+                  required
+                  placeholder="Your roll number"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Program *
+                </label>
+
+                <select
+                  name="program"
+                  value={form.program}
+                  onChange={handleChange}
+                  required
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white outline-none focus:border-gray-900"
+                >
+                  <option value="BS(CS)">BS(CS)</option>
+                  <option value="BS(AI)">BS(AI)</option>
+                  <option value="BS(CB)">BS(CB)</option>
+                  <option value="BS(SE)">BS(SE)</option>
+                  <option value="BE(SE)">BE(SE)</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                University Email *
+              </label>
+
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                required
+                autoComplete="email"
+                placeholder="yourname@iqra.edu.pk"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+              />
+
+              <p className="text-xs text-gray-400 mt-2">
+                Only @iqra.edu.pk email addresses can register.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Password *
+              </label>
+
+              <input
+                type="password"
+                name="password"
+                value={form.password}
+                onChange={handleChange}
+                required
+                minLength="6"
+                autoComplete="new-password"
+                placeholder="At least 6 characters"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Confirm Password *
+              </label>
+
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                autoComplete="new-password"
+                placeholder="Enter your password again"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+              />
+            </div>
           </div>
-        )}
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <input
-            name="name"
-            placeholder="Full name"
-            value={form.name}
-            onChange={handleChange}
-            required
-            className="w-full border rounded-xl px-4 py-3"
-          />
-
-          <input
-            name="university_id"
-            placeholder="University / Roll number"
-            value={form.university_id}
-            onChange={handleChange}
-            required
-            className="w-full border rounded-xl px-4 py-3"
-          />
-
-          <input
-            name="email"
-            type="email"
-            placeholder="University email"
-            value={form.email}
-            onChange={handleChange}
-            required
-            className="w-full border rounded-xl px-4 py-3"
-          />
-
-          <input
-            name="password"
-            type="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={handleChange}
-            required
-            minLength={8}
-            className="w-full border rounded-xl px-4 py-3"
-          />
-
-          <select
-            name="program"
-            value={form.program}
-            onChange={handleChange}
-            className="w-full border rounded-xl px-4 py-3 bg-white"
-          >
-            <option value="BSCS">BSCS</option>
-            <option value="BSAI">BSAI</option>
-            <option value="BSCB">BSCB</option>
-            <option value="BSSE">BSSE</option>
-            <option value="BESE">BESE</option>
-          </select>
+          {error && (
+            <div className="mt-5 border border-red-200 bg-red-50 text-red-700 rounded-lg px-4 py-3 text-sm">
+              {error}
+            </div>
+          )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-black text-white rounded-xl py-3 font-medium"
+            className="w-full mt-6 bg-gray-900 text-white py-3 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition"
           >
             {loading ? "Creating account..." : "Create Account"}
           </button>
-        </form>
 
-        <p className="text-center text-sm text-gray-500 mt-6">
-          Already have an account?{" "}
-          <button
-            onClick={() => navigate("/login")}
-            className="text-black font-medium"
-          >
-            Login
-          </button>
-        </p>
+          <p className="text-sm text-gray-500 text-center mt-6">
+            Already have an account?{" "}
+            <Link
+              to="/login"
+              className="font-medium text-gray-900 hover:underline"
+            >
+              Sign in
+            </Link>
+          </p>
+        </form>
       </div>
     </main>
   );
