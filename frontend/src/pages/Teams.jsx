@@ -91,9 +91,10 @@ function Teams() {
         >
           <option value="All">All Programs</option>
           <option value="BSCS">BSCS</option>
-          <option value="BSSE">BSSE</option>
-          <option value="BSCY">BSCY</option>
           <option value="BSAI">BSAI</option>
+          <option value="BSCB">BSCB</option>
+          <option value="BSSE">BSSE</option>
+          <option value="BESE">BESE</option>
         </select>
       </div>
 

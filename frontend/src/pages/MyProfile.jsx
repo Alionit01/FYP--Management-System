@@ -191,9 +191,10 @@ function MyProfile() {
             className="w-full border rounded-xl px-4 py-3 bg-white"
           >
             <option value="BSCS">BSCS</option>
-            <option value="BSSE">BSSE</option>
-            <option value="BSCY">BSCY</option>
             <option value="BSAI">BSAI</option>
+            <option value="BSCB">BSCB</option>
+            <option value="BSSE">BSSE</option>
+            <option value="BESE">BESE</option>
           </select>
         </div>
 
