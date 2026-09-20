@@ -90,11 +90,11 @@ function Students() {
               className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white outline-none focus:border-gray-900"
             >
               <option value="All">All Programs</option>
-              <option value="BS(CS)">BS(CS)</option>
-              <option value="BS(AI)">BS(AI)</option>
-              <option value="BS(CB)">BS(CB)</option>
-              <option value="BS(SE)">BS(SE)</option>
-              <option value="BE(SE)">BE(SE)</option>
+              <option value="BSCS">BSCS</option>
+              <option value="BSAI">BSAI</option>
+              <option value="BSCB">BSCB</option>
+              <option value="BSSE">BSSE</option>
+              <option value="BESE">BESE</option>
             </select>
           </div>
 
@@ -158,7 +158,7 @@ function Students() {
           {filteredStudents.map((student) => (
             <article
               key={student.id}
-              className="bg-white border border-gray-200 rounded-xl p-5 hover:border-gray-400 transition"
+              className="bg-white border border-gray-300 rounded-xl p-5 flex flex-col hover:border-gray-400 transition"
             >
 
               <div className="flex items-start gap-4">
@@ -197,16 +197,25 @@ function Students() {
               )}
 
               {student.skills && (
-                <div className="mt-4">
-                  <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
-                    Skills
-                  </p>
+  <div className="mt-4">
+    <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
+      Skills
+    </p>
 
-                  <p className="mt-1 text-sm text-gray-600 line-clamp-2">
-                    {student.skills}
-                  </p>
-                </div>
-              )}
+    <div className="flex flex-wrap gap-2 mt-2">
+      {student.skills
+        .split(",")
+        .map((skill, index) => (
+          <span
+            key={index}
+            className="text-xs font-medium bg-gray-100 text-gray-700 px-2.5 py-1 rounded-full"
+          >
+            {skill.trim()}
+          </span>
+        ))}
+    </div>
+  </div>
+)}
 
               {student.interests && (
                 <div className="mt-3">
@@ -220,9 +229,10 @@ function Students() {
                 </div>
               )}
 
+              {/* View Profile */}
               <Link
                 to={`/students/${student.id}`}
-                className="block mt-5 text-center border border-gray-300 rounded-lg py-2.5 text-sm font-medium hover:bg-gray-50 transition"
+                className="block mt-auto pt-5 text-center border border-gray-300 rounded-lg py-2.5 text-sm font-medium hover:bg-gray-50 transition"
               >
                 View Profile
               </Link>

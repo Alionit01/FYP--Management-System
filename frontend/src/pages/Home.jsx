@@ -27,14 +27,13 @@ function Home() {
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
               <Link
                 to="/students"
-                className="inline-flex items-center justify-center bg-gray-900 text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800 transition"
-              >
+                className="inline-flex items-center justify-center bg-gray-900 !text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800 transition"              >
                 Find Students
               </Link>
 
               <Link
                 to="/teams"
-                className="inline-flex items-center justify-center border border-gray-300 bg-white px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition"
+                className="inline-flex items-center justify-center  border border-gray-300 bg-white px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition"
               >
                 Explore Teams
               </Link>
@@ -132,7 +131,7 @@ function Home() {
             <div className="mt-6 md:mt-0 shrink-0">
               <Link
                 to="/teams"
-                className="inline-flex items-center justify-center bg-gray-900 text-white px-5 py-3 rounded-lg font-medium hover:bg-gray-800 transition"
+                className="inline-flex items-center justify-center !text-white bg-gray-900 text-white px-5 py-3 rounded-lg font-medium hover:bg-gray-800 transition"
               >
                 Explore Teams
               </Link>

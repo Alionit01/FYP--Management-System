@@ -28,9 +28,7 @@ function Teams() {
       ${team.roles_needed || ""}
     `.toLowerCase();
 
-    const matchesSearch = searchText.includes(
-      search.toLowerCase()
-    );
+    const matchesSearch = searchText.includes(search.toLowerCase());
 
     const matchesProgram =
       program === "All" ||
@@ -42,7 +40,6 @@ function Teams() {
 
   return (
     <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 pb-24 md:pb-10">
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-8">
         <div>
@@ -55,14 +52,14 @@ function Teams() {
           </h1>
 
           <p className="mt-3 text-gray-600 max-w-2xl">
-            Explore FYP teams, see what they are building, and
-            find out which skills and roles they need.
+            Explore FYP teams, see what they are building, and find out which
+            skills and roles they need.
           </p>
         </div>
 
         <Link
           to="/teams/create"
-          className="inline-flex items-center justify-center bg-gray-900 text-white px-5 py-3 rounded-lg font-medium text-sm hover:bg-gray-800 transition shrink-0"
+          className="inline-flex items-center !text-white justify-center bg-gray-900 text-white px-5 py-3 rounded-lg font-medium text-sm hover:bg-gray-800 transition shrink-0"
         >
           Create Team
         </Link>
@@ -71,7 +68,6 @@ function Teams() {
       {/* Filters */}
       <section className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 mb-8">
         <div className="grid gap-4 md:grid-cols-3">
-
           <div className="md:col-span-2">
             <label className="block text-sm font-medium mb-2">
               Search
@@ -97,14 +93,13 @@ function Teams() {
               className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white outline-none focus:border-gray-900"
             >
               <option value="All">All Departments</option>
-              <option value="BS(CS)">BS(CS)</option>
-              <option value="BS(AI)">BS(AI)</option>
-              <option value="BS(CB)">BS(CB)</option>
-              <option value="BS(SE)">BS(SE)</option>
-              <option value="BE(SE)">BE(SE)</option>
+              <option value="BSCS">BSCS</option>
+              <option value="BSAI">BSAI</option>
+              <option value="BSCB">BSCB</option>
+              <option value="BSSE">BSSE</option>
+              <option value="BESE">BESE</option>
             </select>
           </div>
-
         </div>
       </section>
 
@@ -126,9 +121,7 @@ function Teams() {
       {/* Empty */}
       {!loading && filteredTeams.length === 0 && (
         <div className="border border-dashed border-gray-300 rounded-xl p-10 text-center">
-          <h2 className="font-semibold text-lg">
-            No teams found
-          </h2>
+          <h2 className="font-semibold text-lg">No teams found</h2>
 
           <p className="mt-2 text-gray-500">
             Try changing your search or department filter.
@@ -138,14 +131,12 @@ function Teams() {
 
       {/* Teams */}
       {!loading && filteredTeams.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
           {filteredTeams.map((team) => (
             <article
               key={team.id}
-              className="bg-white border border-gray-200 rounded-xl p-5 hover:border-gray-400 transition flex flex-col"
+              className="bg-white border border-gray-300 rounded-xl p-5 flex flex-col h-full hover:border-gray-400 transition"
             >
-
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h2 className="text-lg font-semibold truncate">
@@ -175,9 +166,7 @@ function Teams() {
               </div>
 
               {team.project_title && (
-                <h3 className="mt-5 font-medium">
-                  {team.project_title}
-                </h3>
+                <h3 className="mt-5 font-medium">{team.project_title}</h3>
               )}
 
               {team.description && (
@@ -187,42 +176,54 @@ function Teams() {
               )}
 
               {team.skills_needed && (
-                <div className="mt-5">
-                  <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
-                    Skills needed
-                  </p>
+  <div className="mt-5">
+    <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
+      Skills needed
+    </p>
 
-                  <p className="mt-1 text-sm text-gray-600 line-clamp-2">
-                    {team.skills_needed}
-                  </p>
-                </div>
-              )}
+    <div className="flex flex-wrap gap-2 mt-2">
+      {team.skills_needed.split(",").map((skill, index) => (
+        <span
+          key={index}
+          className="text-xs font-medium bg-gray-100 text-gray-700 px-2.5 py-1 rounded-full"
+        >
+          {skill.trim()}
+        </span>
+      ))}
+    </div>
+  </div>
+)}
 
               {team.roles_needed && (
-                <div className="mt-3">
-                  <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
-                    Roles
-                  </p>
+  <div className="mt-4">
+    <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
+      Roles needed
+    </p>
 
-                  <p className="mt-1 text-sm text-gray-600 line-clamp-2">
-                    {team.roles_needed}
-                  </p>
-                </div>
-              )}
+    <div className="flex flex-wrap gap-2 mt-2">
+      {team.roles_needed.split(",").map((role, index) => (
+        <span
+          key={index}
+          className="text-xs font-medium bg-gray-100 text-gray-700 px-2.5 py-1 rounded-full"
+        >
+          {role.trim()}
+        </span>
+      ))}
+    </div>
+  </div>
+)}
 
+              {/* View Team */}
               <Link
                 to={`/teams/${team.id}`}
-                className="block mt-5 text-center border border-gray-300 rounded-lg py-2.5 text-sm font-medium hover:bg-gray-50 transition"
+                className="block mt-auto pt-5 text-center border border-gray-300 rounded-lg py-2.5 text-sm font-medium hover:bg-gray-50 transition"
               >
                 View Team
               </Link>
-
             </article>
           ))}
-
         </div>
       )}
-
     </main>
   );
 }

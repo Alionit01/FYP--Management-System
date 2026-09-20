@@ -1,52 +1,70 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, UserPlus, UserMinus } from "lucide-react";
 
 function MyTeam() {
+  const navigate = useNavigate();
+
   const [team, setTeam] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [memberId, setMemberId] = useState("");
+  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const [studentId, setStudentId] = useState("");
-  const [student, setStudent] = useState(null);
-
-  const [memberId, setMemberId] = useState("");
-  const [memberLoading, setMemberLoading] = useState(false);
-
   const token = localStorage.getItem("access_token");
+  const studentId = localStorage.getItem("student_id");
+
+  const fetchTeam = async () => {
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/my-team",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Unable to load team.");
+      }
+
+      const data = await response.json();
+
+      console.log("MY TEAM RESPONSE:", data);
+      console.log("LOGGED-IN STUDENT ID:", studentId);
+
+      setTeam(data);
+    } catch (err) {
+      console.error(err);
+      setTeam(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/my-team", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data === null) {
-          setTeam(null);
-        } else {
-          setTeam(data);
-        }
+    fetchTeam();
+  }, []);
 
-        setLoading(false);
-      })
-      .catch(() => {
-        setError("Could not load your team.");
-        setLoading(false);
-      });
-  }, [token]);
+  const isOwner =
+    team &&
+    String(team.created_by) === String(studentId);
 
-  const addMember = async () => {
+  const handleAddMember = async (e) => {
+    e.preventDefault();
+
+    setMessage("");
+    setError("");
+
     if (!memberId.trim()) {
+      setError("Please enter a Student ID.");
       return;
     }
 
-    setMemberLoading(true);
-    setError("");
-
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/teams/${team.id}/members/${memberId}`,
+        `http://127.0.0.1:8000/teams/${team.id}/members/${memberId.trim()}`,
         {
           method: "POST",
           headers: {
@@ -58,25 +76,35 @@ function MyTeam() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.detail || "Could not add student.");
-        return;
+        throw new Error(
+          data.detail || "Unable to add member."
+        );
       }
 
-      setStudent(data);
+      setMessage("Member added successfully.");
       setMemberId("");
-    } catch {
-      setError("Could not connect to the server.");
-    } finally {
-      setMemberLoading(false);
+
+      await fetchTeam();
+    } catch (err) {
+      setError(err.message);
     }
   };
 
-  const removeMember = async (id) => {
+  const handleRemoveMember = async (member) => {
+    setMessage("");
     setError("");
+
+    const confirmed = window.confirm(
+      `Remove ${member.name} from the team?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
 
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/teams/${team.id}/members/${id}`,
+        `http://127.0.0.1:8000/teams/${team.id}/members/${member.id}`,
         {
           method: "DELETE",
           headers: {
@@ -88,292 +116,243 @@ function MyTeam() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.detail || "Could not remove student.");
-        return;
+        throw new Error(
+          data.detail || "Unable to remove member."
+        );
       }
 
-      setTeam((currentTeam) => ({
-        ...currentTeam,
-        members: currentTeam.members.filter(
-          (member) => member.id !== id
-        ),
-        spots_available: currentTeam.spots_available + 1,
-      }));
-    } catch {
-      setError("Could not connect to the server.");
+      setMessage("Member removed successfully.");
+
+      await fetchTeam();
+    } catch (err) {
+      setError(err.message);
     }
   };
 
   if (loading) {
     return (
-      <main className="max-w-4xl mx-auto px-4 py-10 pb-24 md:pb-10">
-        <p className="text-gray-500">Loading your team...</p>
-      </main>
-    );
-  }
-
-  if (error && !team) {
-    return (
-      <main className="max-w-4xl mx-auto px-4 py-10 pb-24 md:pb-10">
-        <div className="border border-red-200 bg-red-50 rounded-xl p-6">
-          <p className="text-red-700">{error}</p>
-        </div>
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+        <p className="text-gray-500">
+          Loading your team...
+        </p>
       </main>
     );
   }
 
   if (!team) {
     return (
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-10 pb-24 md:pb-10">
-        <div className="border border-gray-200 rounded-2xl p-8 sm:p-10 text-center bg-white">
-          <p className="text-sm font-semibold text-gray-400 uppercase tracking-wide">
-            My Team
-          </p>
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 pb-24 md:pb-10">
 
-          <h1 className="mt-3 text-2xl sm:text-3xl font-bold">
-            You are not in a team yet
+        <button
+          type="button"
+          onClick={() => navigate("/teams")}
+          className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 cursor-pointer transition-colors"
+        >
+          <ArrowLeft size={18} />
+          <span>Back to Teams</span>
+        </button>
+
+        <div className="mt-8 border border-gray-300 rounded-xl p-8 text-center">
+          <h1 className="text-xl font-bold text-gray-900">
+            You are not in a team
           </h1>
 
-          <p className="mt-3 text-gray-500 max-w-md mx-auto">
-            Browse existing teams or create your own FYP team.
+          <p className="mt-2 text-gray-500">
+            Find an existing team or create your own.
           </p>
 
-          <div className="mt-6 flex flex-col sm:flex-row justify-center gap-3">
-            <Link
-              to="/teams"
-              className="bg-gray-900 text-white px-5 py-3 rounded-lg text-sm font-medium hover:bg-gray-800"
-            >
-              Browse Teams
-            </Link>
-
-            <Link
-              to="/teams/create"
-              className="border border-gray-300 px-5 py-3 rounded-lg text-sm font-medium hover:bg-gray-50"
-            >
-              Create a Team
-            </Link>
-          </div>
+          <button
+            type="button"
+            onClick={() => navigate("/teams")}
+            className="mt-5 bg-gray-900 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-gray-800 transition"
+          >
+            Find a Team
+          </button>
         </div>
+
       </main>
     );
   }
 
-  const isOwner =
-    String(team.created_by) ===
-    String(localStorage.getItem("student_id"));
-
   return (
     <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 pb-24 md:pb-10">
-      <div className="mb-8">
+
+      {/* Back */}
+      <button
+        type="button"
+        onClick={() => navigate("/teams")}
+        className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 cursor-pointer transition-colors"
+      >
+        <ArrowLeft size={18} />
+        <span>Back to Teams</span>
+      </button>
+
+      {/* Header */}
+      <section className="mt-6">
         <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
           My Team
         </p>
 
-        <h1 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight">
+        <h1 className="mt-2 text-3xl sm:text-4xl font-bold text-gray-900">
           {team.name}
         </h1>
 
-        <p className="mt-2 text-gray-500">
-          {team.department_preference === "Any"
-            ? "Open to all departments"
-            : team.department_preference}
+        <p className="mt-2 text-lg font-semibold text-gray-800">
+          {team.project_title}
         </p>
-      </div>
+      </section>
 
-      <div className="space-y-5">
-        {/* Team overview */}
-        <section className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8">
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="text-xl font-semibold">
-              Team Overview
-            </h2>
+      {/* Team Overview */}
+      <section className="mt-6 bg-white border border-gray-300 rounded-xl p-5 sm:p-6">
 
-            <span className="text-sm border border-gray-200 rounded-full px-3 py-1">
-              {team.spots_available > 0
-                ? `${team.spots_available} spot${
-                    team.spots_available === 1 ? "" : "s"
-                  } available`
-                : "Full"}
-            </span>
+        <div>
+          <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
+            Description
+          </p>
+
+          <p className="mt-2 text-gray-600 leading-relaxed">
+            {team.description || "No description provided."}
+          </p>
+        </div>
+
+        {team.contact && (
+          <div className="mt-5 pt-5 border-t border-gray-200">
+            <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
+              Team Contact
+            </p>
+
+            <p className="mt-1 text-sm text-gray-700">
+              {team.contact}
+            </p>
           </div>
+        )}
 
-          {team.project_title && (
-            <div className="mt-6">
-              <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
-                Project
-              </p>
-              <p className="mt-1 font-semibold text-lg">
-                {team.project_title}
-              </p>
-            </div>
-          )}
+      </section>
 
-          {team.description && (
-            <div className="mt-5">
-              <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
-                Description
-              </p>
-              <p className="mt-1 text-gray-600 leading-relaxed">
-                {team.description}
-              </p>
-            </div>
-          )}
+      {/* Members */}
+      <section className="mt-6 bg-white border border-gray-300 rounded-xl p-5 sm:p-6">
 
-          {team.skills_needed && (
-            <div className="mt-5">
-              <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
-                Skills Needed
-              </p>
-              <p className="mt-1 text-gray-600">
-                {team.skills_needed}
-              </p>
-            </div>
-          )}
+        <div>
+          <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
+            Team Members
+          </p>
 
-          {team.roles_needed && (
-            <div className="mt-5">
-              <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
-                Roles Needed
-              </p>
-              <p className="mt-1 text-gray-600">
-                {team.roles_needed}
-              </p>
-            </div>
-          )}
-        </section>
+          <h2 className="mt-1 text-xl font-bold text-gray-900">
+            {team.members?.length || 0} Members
+          </h2>
+        </div>
 
-        {/* Members */}
-        <section className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8">
-          <div className="flex items-center justify-between gap-4 mb-5">
-            <h2 className="text-xl font-semibold">
-              Members
-            </h2>
+        <div className="mt-5 space-y-3">
+          {team.members?.map((member) => (
+            <div
+              key={member.id}
+              className="flex items-center justify-between gap-3 border border-gray-200 rounded-lg p-3"
+            >
 
-            <span className="text-sm text-gray-500">
-              {team.members?.length || 0} member
-              {(team.members?.length || 0) !== 1 ? "s" : ""}
-            </span>
-          </div>
+              <div className="min-w-0">
+                <p className="font-medium text-gray-900 truncate">
+                  {member.name}
+                </p>
 
-          <div className="space-y-3">
-            {team.members?.map((member) => (
-              <div
-                key={member.id}
-                className="border border-gray-200 rounded-xl p-4 flex items-center gap-4"
-              >
-                {member.profile_picture ? (
-                  <img
-                    src={member.profile_picture}
-                    alt={member.name}
-                    className="w-11 h-11 rounded-full object-cover shrink-0"
-                  />
-                ) : (
-                  <div className="w-11 h-11 rounded-full bg-gray-100 flex items-center justify-center font-semibold shrink-0">
-                    {member.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
+                <p className="text-sm text-gray-500">
+                  {member.program}
+                </p>
+              </div>
 
-                <Link
-                  to={`/students/${member.id}`}
-                  className="min-w-0 flex-1"
+              <div className="flex items-center gap-3 shrink-0">
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate(`/students/${member.id}`)
+                  }
+                  className="text-sm font-medium text-gray-600 hover:text-gray-900 transition"
                 >
-                  <p className="font-medium hover:underline">
-                    {member.name}
-                  </p>
-
-                  <p className="text-sm text-gray-500">
-                    {member.program}
-                  </p>
-                </Link>
-
-                {String(member.id) === String(team.created_by) && (
-                  <span className="text-xs border border-gray-200 rounded-full px-2.5 py-1 text-gray-500">
-                    Owner
-                  </span>
-                )}
+                  View
+                </button>
 
                 {isOwner &&
-                  String(member.id) !== String(team.created_by) && (
+                  String(member.id) !== String(studentId) && (
                     <button
-                      onClick={() => removeMember(member.id)}
-                      className="text-sm text-gray-500 hover:text-red-600"
+                      type="button"
+                      onClick={() =>
+                        handleRemoveMember(member)
+                      }
+                      className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition"
                     >
+                      <UserMinus size={16} />
                       Remove
                     </button>
                   )}
-              </div>
-            ))}
-          </div>
 
-          {/* Add member */}
-          {isOwner && team.spots_available > 0 && (
-            <div className="mt-7 pt-6 border-t border-gray-200">
-              <h3 className="font-semibold">
+              </div>
+
+            </div>
+          ))}
+        </div>
+
+        {/* Add Member */}
+        {isOwner && (
+          <div className="mt-6 pt-6 border-t border-gray-200">
+
+            <div className="flex items-center gap-2">
+              <UserPlus
+                size={19}
+                className="text-gray-700"
+              />
+
+              <h3 className="text-lg font-bold text-gray-900">
                 Add a Member
               </h3>
-
-              <p className="text-sm text-gray-500 mt-1">
-                Enter the student's database ID.
-              </p>
-
-              <div className="mt-4 flex flex-col sm:flex-row gap-3">
-                <input
-                  type="number"
-                  value={memberId}
-                  onChange={(e) => setMemberId(e.target.value)}
-                  placeholder="Student ID"
-                  className="flex-1 border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
-                />
-
-                <button
-                  onClick={addMember}
-                  disabled={memberLoading}
-                  className="bg-gray-900 text-white px-5 py-3 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
-                >
-                  {memberLoading ? "Adding..." : "Add Member"}
-                </button>
-              </div>
             </div>
-          )}
-
-          {isOwner && team.spots_available === 0 && (
-            <div className="mt-7 pt-6 border-t border-gray-200">
-              <p className="text-sm text-gray-500">
-                Your team is currently full.
-              </p>
-            </div>
-          )}
-        </section>
-
-        {/* Contact */}
-        {team.contact && (
-          <section className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8">
-            <h2 className="text-xl font-semibold">
-              Team Contact
-            </h2>
 
             <p className="mt-1 text-sm text-gray-500">
-              This information is visible only to logged-in students.
+              Enter the student's Student ID. They can find it
+              on their Profile page.
             </p>
 
-            <div className="mt-5 border border-gray-200 rounded-lg px-4 py-3">
-              <p className="text-xs text-gray-400">
-                Contact
-              </p>
+            <form
+              onSubmit={handleAddMember}
+              className="mt-4 flex flex-col sm:flex-row gap-3"
+            >
 
-              <p className="text-sm font-medium mt-1">
-                {team.contact}
-              </p>
-            </div>
-          </section>
-        )}
+              <input
+                type="text"
+                value={memberId}
+                onChange={(e) =>
+                  setMemberId(e.target.value)
+                }
+                placeholder="e.g. AUTH002"
+                className="flex-1 border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+              />
 
-        {error && (
-          <div className="border border-red-200 bg-red-50 rounded-xl px-4 py-3 text-sm text-red-700">
-            {error}
+              <button
+                type="submit"
+                className="inline-flex items-center justify-center gap-2 bg-gray-900 text-white px-5 py-3 rounded-lg font-medium hover:bg-gray-800 transition"
+              >
+                <UserPlus size={17} />
+                Add Member
+              </button>
+
+            </form>
+
+            {message && (
+              <p className="mt-3 text-sm text-gray-600">
+                {message}
+              </p>
+            )}
+
+            {error && (
+              <p className="mt-3 text-sm text-red-600">
+                {error}
+              </p>
+            )}
+
           </div>
         )}
-      </div>
+
+      </section>
+
     </main>
   );
 }

@@ -38,3 +38,18 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+/* Primary action buttons */
+.primary-button {
+  background-color: #111827;
+  color: #ffffff;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.primary-button:hover {
+  background-color: #1f2937;
+}
+
+.primary-button:active {
+  transform: translateY(1px);
+}
