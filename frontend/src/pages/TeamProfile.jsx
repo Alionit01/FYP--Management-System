@@ -12,7 +12,13 @@ function TeamProfile() {
 
   useEffect(() => {
     fetch(`http://127.0.0.1:8000/teams/${id}`)
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Unable to load team");
+        }
+
+        return response.json();
+      })
       .then((data) => {
         setTeam(data);
         setLoading(false);
@@ -23,7 +29,7 @@ function TeamProfile() {
   }, [id]);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("access_token");
 
     if (!token) {
       return;
@@ -81,7 +87,6 @@ function TeamProfile() {
 
   return (
     <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 pb-24 md:pb-10">
-
       {/* Back */}
       <button
         type="button"
@@ -94,7 +99,6 @@ function TeamProfile() {
 
       {/* Team Header */}
       <section className="mt-6 bg-white border border-gray-300 rounded-xl p-5 sm:p-6">
-
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-sm font-medium text-gray-500">
@@ -104,23 +108,41 @@ function TeamProfile() {
             <h1 className="mt-1 text-2xl sm:text-3xl font-bold text-gray-900">
               {team.name}
             </h1>
+
+            <p className="mt-2 text-sm text-gray-500">
+              {team.department_preference === "Any"
+                ? "Open to all departments"
+                : team.department_preference}
+            </p>
           </div>
 
-          <span className="self-start text-sm font-medium bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full">
-            {team.spots_available} spots available
+          <span
+            className={`self-start text-sm font-medium px-3 py-1.5 rounded-full ${
+              team.spots_available > 0
+                ? "bg-gray-100 text-gray-700"
+                : "bg-gray-200 text-gray-500"
+            }`}
+          >
+            {team.spots_available > 0
+              ? `${team.spots_available} spot${
+                  team.spots_available === 1 ? "" : "s"
+                } available`
+              : "Full"}
           </span>
         </div>
 
         {/* Project */}
-        <div className="mt-6">
-          <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
-            Project
-          </p>
+        {team.project_title && (
+          <div className="mt-6">
+            <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
+              Project
+            </p>
 
-          <h2 className="mt-1 text-xl font-bold text-gray-900">
-            {team.project_title}
-          </h2>
-        </div>
+            <h2 className="mt-1 text-xl font-bold text-gray-900">
+              {team.project_title}
+            </h2>
+          </div>
+        )}
 
         {/* Description */}
         {team.description && (
@@ -182,17 +204,15 @@ function TeamProfile() {
               Team Contact
             </p>
 
-            <p className="mt-1 text-sm text-gray-700">
+            <p className="mt-1 text-sm text-gray-700 break-all">
               {contact}
             </p>
           </div>
         )}
-
       </section>
 
       {/* Members */}
       <section className="mt-6 bg-white border border-gray-300 rounded-xl p-5 sm:p-6">
-
         <div>
           <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
             Team Members
@@ -203,32 +223,36 @@ function TeamProfile() {
           </h2>
         </div>
 
-        <div className="mt-5 space-y-3">
-          {team.members?.map((member) => (
-            <Link
-              key={member.id}
-              to={`/students/${member.id}`}
-              className="flex items-center justify-between gap-3 border border-gray-200 rounded-lg p-3 hover:border-gray-400 transition"
-            >
-              <div className="min-w-0">
-                <p className="font-medium text-gray-900 truncate">
-                  {member.name}
-                </p>
+        {team.members?.length > 0 ? (
+          <div className="mt-5 space-y-3">
+            {team.members.map((member) => (
+              <Link
+                key={member.id}
+                to={`/students/${member.id}`}
+                className="flex items-center justify-between gap-3 border border-gray-200 rounded-lg p-3 hover:border-gray-400 transition"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium text-gray-900 truncate">
+                    {member.name}
+                  </p>
 
-                <p className="text-sm text-gray-500">
-                  {member.program}
-                </p>
-              </div>
+                  <p className="text-sm text-gray-500">
+                    {member.program}
+                  </p>
+                </div>
 
-              <span className="text-sm text-gray-500 shrink-0">
-                View
-              </span>
-            </Link>
-          ))}
-        </div>
-
+                <span className="text-sm text-gray-500 shrink-0">
+                  View
+                </span>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-5 text-sm text-gray-500">
+            No members found.
+          </p>
+        )}
       </section>
-
     </main>
   );
 }
