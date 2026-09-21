@@ -31,9 +31,6 @@ function MyTeam() {
 
       const data = await response.json();
 
-      console.log("MY TEAM RESPONSE:", data);
-      console.log("LOGGED-IN STUDENT ID:", studentId);
-
       setTeam(data);
     } catch (err) {
       console.error(err);
@@ -50,6 +47,20 @@ function MyTeam() {
   const isOwner =
     team &&
     String(team.created_by) === String(studentId);
+
+  const skills = team?.skills_needed
+    ? team.skills_needed
+        .split(",")
+        .map((skill) => skill.trim())
+        .filter(Boolean)
+    : [];
+
+  const roles = team?.roles_needed
+    ? team.roles_needed
+        .split(",")
+        .map((role) => role.trim())
+        .filter(Boolean)
+    : [];
 
   const handleAddMember = async (e) => {
     e.preventDefault();
@@ -142,7 +153,6 @@ function MyTeam() {
   if (!team) {
     return (
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 pb-24 md:pb-10">
-
         <button
           type="button"
           onClick={() => navigate("/teams")}
@@ -169,14 +179,12 @@ function MyTeam() {
             Find a Team
           </button>
         </div>
-
       </main>
     );
   }
 
   return (
     <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 pb-24 md:pb-10">
-
       {/* Back */}
       <button
         type="button"
@@ -193,18 +201,44 @@ function MyTeam() {
           My Team
         </p>
 
-        <h1 className="mt-2 text-3xl sm:text-4xl font-bold text-gray-900">
-          {team.name}
-        </h1>
+        <div className="mt-2 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
+              {team.name}
+            </h1>
 
-        <p className="mt-2 text-lg font-semibold text-gray-800">
-          {team.project_title}
-        </p>
+            {team.project_title && (
+              <p className="mt-2 text-lg font-semibold text-gray-800">
+                {team.project_title}
+              </p>
+            )}
+
+            <p className="mt-2 text-sm text-gray-500">
+              {team.department_preference === "Any"
+                ? "Open to all departments"
+                : team.department_preference}
+            </p>
+          </div>
+
+          <span
+            className={`self-start text-sm font-medium px-3 py-1.5 rounded-full ${
+              team.spots_available > 0
+                ? "bg-gray-100 text-gray-700"
+                : "bg-gray-200 text-gray-500"
+            }`}
+          >
+            {team.spots_available > 0
+              ? `${team.spots_available} spot${
+                  team.spots_available === 1 ? "" : "s"
+                } available`
+              : "Full"}
+          </span>
+        </div>
       </section>
 
       {/* Team Overview */}
       <section className="mt-6 bg-white border border-gray-300 rounded-xl p-5 sm:p-6">
-
+        {/* Description */}
         <div>
           <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
             Description
@@ -215,23 +249,62 @@ function MyTeam() {
           </p>
         </div>
 
+        {/* Skills */}
+        {skills.length > 0 && (
+          <div className="mt-6">
+            <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
+              Skills Needed
+            </p>
+
+            <div className="flex flex-wrap gap-2 mt-2">
+              {skills.map((skill, index) => (
+                <span
+                  key={index}
+                  className="text-sm font-medium bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full"
+                >
+                  {skill}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Roles */}
+        {roles.length > 0 && (
+          <div className="mt-5">
+            <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
+              Roles Needed
+            </p>
+
+            <div className="flex flex-wrap gap-2 mt-2">
+              {roles.map((role, index) => (
+                <span
+                  key={index}
+                  className="text-sm font-medium bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full"
+                >
+                  {role}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Contact */}
         {team.contact && (
-          <div className="mt-5 pt-5 border-t border-gray-200">
+          <div className="mt-6 pt-5 border-t border-gray-200">
             <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
               Team Contact
             </p>
 
-            <p className="mt-1 text-sm text-gray-700">
+            <p className="mt-1 text-sm text-gray-700 break-all">
               {team.contact}
             </p>
           </div>
         )}
-
       </section>
 
       {/* Members */}
       <section className="mt-6 bg-white border border-gray-300 rounded-xl p-5 sm:p-6">
-
         <div>
           <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
             Team Members
@@ -248,7 +321,6 @@ function MyTeam() {
               key={member.id}
               className="flex items-center justify-between gap-3 border border-gray-200 rounded-lg p-3"
             >
-
               <div className="min-w-0">
                 <p className="font-medium text-gray-900 truncate">
                   {member.name}
@@ -260,7 +332,6 @@ function MyTeam() {
               </div>
 
               <div className="flex items-center gap-3 shrink-0">
-
                 <button
                   type="button"
                   onClick={() =>
@@ -284,9 +355,7 @@ function MyTeam() {
                       Remove
                     </button>
                   )}
-
               </div>
-
             </div>
           ))}
         </div>
@@ -294,7 +363,6 @@ function MyTeam() {
         {/* Add Member */}
         {isOwner && (
           <div className="mt-6 pt-6 border-t border-gray-200">
-
             <div className="flex items-center gap-2">
               <UserPlus
                 size={19}
@@ -315,7 +383,6 @@ function MyTeam() {
               onSubmit={handleAddMember}
               className="mt-4 flex flex-col sm:flex-row gap-3"
             >
-
               <input
                 type="text"
                 value={memberId}
@@ -333,7 +400,6 @@ function MyTeam() {
                 <UserPlus size={17} />
                 Add Member
               </button>
-
             </form>
 
             {message && (
@@ -347,12 +413,9 @@ function MyTeam() {
                 {error}
               </p>
             )}
-
           </div>
         )}
-
       </section>
-
     </main>
   );
 }
