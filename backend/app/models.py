@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text
+from sqlalchemy import Column, Integer, String, Text, UniqueConstraint
 from .database import Base
 
 
@@ -40,3 +40,11 @@ class TeamMember(Base):
     id = Column(Integer, primary_key=True, index=True)
     team_id = Column(Integer, nullable=False)
     student_id = Column(Integer, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "team_id",
+            "student_id",
+            name="unique_team_student"
+        ),
+    )

@@ -26,6 +26,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+PROGRAMS = {
+    "BSCS",
+    "BSAI",
+    "BSCB",
+    "BSSE",
+    "BESE",
+}
+
+FYP_STATUSES = {
+    "Looking for a team",
+    "Already in a team",
+}
+
+TEAM_DEPARTMENT_OPTIONS = PROGRAMS | {"Any"}
+
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -78,6 +93,18 @@ def create_student(student: StudentCreate):
         raise HTTPException(
             status_code=400,
             detail="Email or university ID already registered"
+        )
+
+    if student.program not in PROGRAMS:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid program"
+        )
+
+    if student.fyp_status and student.fyp_status not in FYP_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid FYP status"
         )
 
     new_student = models.Student(
@@ -226,6 +253,21 @@ def update_my_profile(
             detail="Student not found"
         )
 
+    if student_data.program not in PROGRAMS:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid program"
+        )
+
+    if (
+            student_data.fyp_status
+            and student_data.fyp_status not in FYP_STATUSES
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid FYP status"
+        )
+
     student.name = student_data.name
     student.program = student_data.program
     student.profile_picture = student_data.profile_picture
@@ -294,6 +336,18 @@ def create_team(
     db.commit()
     db.refresh(new_team)
 
+    if team.department_preference not in TEAM_DEPARTMENT_OPTIONS:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid department preference"
+        )
+
+    if team.spots_available < 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Available spots cannot be negative"
+        )
+
     creator_member = models.TeamMember(
         team_id=new_team.id,
         student_id=current_student.id
@@ -311,7 +365,6 @@ def create_team(
         "message": "Team created successfully",
         "team_id": team_id
     }
-
 
 @app.get("/teams")
 def get_teams():
