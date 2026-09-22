@@ -317,54 +317,80 @@ def create_team(
     team: TeamCreate,
     current_student=Depends(get_current_student)
 ):
-
     db = database.SessionLocal()
 
-    new_team = models.Team(
-        name=team.name,
-        project_title=team.project_title,
-        description=team.description,
-        department_preference=team.department_preference,
-        spots_available=team.spots_available,
-        skills_needed=team.skills_needed,
-        roles_needed=team.roles_needed,
-        contact=team.contact,
-        created_by=current_student.id
-    )
+    try:
+        # Student can only belong to one team
+        existing_membership = db.query(models.TeamMember).filter(
+            models.TeamMember.student_id == current_student.id
+        ).first()
 
-    db.add(new_team)
-    db.commit()
-    db.refresh(new_team)
+        if existing_membership:
+            raise HTTPException(
+                status_code=400,
+                detail="You are already in a team"
+            )
 
-    if team.department_preference not in TEAM_DEPARTMENT_OPTIONS:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid department preference"
+        # Validate department before creating anything
+        if team.department_preference not in TEAM_DEPARTMENT_OPTIONS:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid department preference"
+            )
+
+        # Validate spots
+        if team.spots_available < 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Available spots cannot be negative"
+            )
+
+        # Create team
+        new_team = models.Team(
+            name=team.name,
+            project_title=team.project_title,
+            description=team.description,
+            department_preference=team.department_preference,
+            spots_available=team.spots_available,
+            skills_needed=team.skills_needed,
+            roles_needed=team.roles_needed,
+            contact=team.contact,
+            created_by=current_student.id
         )
 
-    if team.spots_available < 0:
-        raise HTTPException(
-            status_code=400,
-            detail="Available spots cannot be negative"
+        db.add(new_team)
+        db.flush()
+
+        # Add creator as first member
+        creator_member = models.TeamMember(
+            team_id=new_team.id,
+            student_id=current_student.id
         )
 
-    creator_member = models.TeamMember(
-        team_id=new_team.id,
-        student_id=current_student.id
-    )
+        db.add(creator_member)
 
-    db.add(creator_member)
+        # Commit everything together
+        db.commit()
+        db.refresh(new_team)
 
-    db.commit()
+        return {
+            "message": "Team created successfully",
+            "team_id": new_team.id
+        }
 
-    team_id = new_team.id
+    except HTTPException:
+        db.rollback()
+        raise
 
-    db.close()
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Could not create team"
+        )
 
-    return {
-        "message": "Team created successfully",
-        "team_id": team_id
-    }
+    finally:
+        db.close()
 
 @app.get("/teams")
 def get_teams():

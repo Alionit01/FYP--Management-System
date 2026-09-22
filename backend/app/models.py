@@ -1,4 +1,11 @@
-from sqlalchemy import Column, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    ForeignKey,
+)
 from .database import Base
 
 
@@ -32,14 +39,27 @@ class Team(Base):
     skills_needed = Column(Text, nullable=True)
     roles_needed = Column(Text, nullable=True)
     contact = Column(String, nullable=True)
-    created_by = Column(Integer, nullable=False)
-
+    created_by = Column(
+        Integer,
+        ForeignKey("students.id"),
+        nullable=False
+    )
 class TeamMember(Base):
     __tablename__ = "team_members"
 
     id = Column(Integer, primary_key=True, index=True)
-    team_id = Column(Integer, nullable=False)
-    student_id = Column(Integer, nullable=False)
+
+    team_id = Column(
+        Integer,
+        ForeignKey("teams.id", ondelete="CASCADE"),
+        nullable=False
+    )
+
+    student_id = Column(
+        Integer,
+        ForeignKey("students.id", ondelete="CASCADE"),
+        nullable=False
+    )
 
     __table_args__ = (
         UniqueConstraint(
