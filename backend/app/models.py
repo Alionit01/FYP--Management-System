@@ -44,6 +44,7 @@ class Team(Base):
         ForeignKey("students.id"),
         nullable=False
     )
+
 class TeamMember(Base):
     __tablename__ = "team_members"
 
@@ -66,5 +67,9 @@ class TeamMember(Base):
             "team_id",
             "student_id",
             name="unique_team_student"
+        ),
+        UniqueConstraint(
+            "student_id",
+            name="unique_student_team"
         ),
     )
