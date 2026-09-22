@@ -1,6 +1,7 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
+import API_URL from "../api";
 
 function TeamProfile() {
   const { id } = useParams();
@@ -11,7 +12,7 @@ function TeamProfile() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`http://127.0.0.1:8000/teams/${id}`)
+    fetch(`${API_URL}/teams/${id}`)
       .then((response) => {
         if (!response.ok) {
           throw new Error("Unable to load team");
@@ -35,7 +36,7 @@ function TeamProfile() {
       return;
     }
 
-    fetch(`http://127.0.0.1:8000/teams/${id}/contact`, {
+    fetch(`${API_URL}/teams/${id}/contact`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -116,19 +117,31 @@ function TeamProfile() {
             </p>
           </div>
 
-          <span
-            className={`self-start text-sm font-medium px-3 py-1.5 rounded-full ${
-              team.spots_available > 0
-                ? "bg-gray-100 text-gray-700"
-                : "bg-gray-200 text-gray-500"
-            }`}
-          >
-            {team.spots_available > 0
-              ? `${team.spots_available} spot${
-                  team.spots_available === 1 ? "" : "s"
-                } available`
-              : "Full"}
-          </span>
+          <div className="flex items-center gap-3 self-start">
+            <span
+              className={`text-sm font-medium px-3 py-1.5 rounded-full ${
+                team.spots_available > 0
+                  ? "bg-gray-100 text-gray-700"
+                  : "bg-gray-200 text-gray-500"
+              }`}
+            >
+              {team.spots_available > 0
+                ? `${team.spots_available} spot${
+                    team.spots_available === 1 ? "" : "s"
+                  } available`
+                : "Full"}
+            </span>
+
+            {String(team.created_by) ===
+              String(localStorage.getItem("student_id")) && (
+              <button
+                onClick={() => navigate(`/teams/${team.id}/edit`)}
+                className="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-gray-800"
+              >
+                Edit Team
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Project */}

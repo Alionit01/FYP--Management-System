@@ -13,6 +13,7 @@ import TeamProfile from "./pages/TeamProfile";
 import CreateTeam from "./pages/CreateTeam";
 import MyTeam from "./pages/MyTeam";
 import MyProfile from "./pages/MyProfile";
+import EditTeam from "./pages/EditTeam";
 
 function App() {
   return (
@@ -53,6 +54,15 @@ function App() {
           element={
             <ProtectedRoute>
               <MyProfile />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/teams/:id/edit"
+          element={
+            <ProtectedRoute>
+              <EditTeam />
             </ProtectedRoute>
           }
         />

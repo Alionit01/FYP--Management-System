@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import API_URL from "../api";
 
 function StudentProfile() {
   const { id } = useParams();
@@ -23,7 +24,7 @@ function StudentProfile() {
         setError("");
 
         const response = await fetch(
-          `http://127.0.0.1:8000/students/${id}`,
+          `${API_URL}/students/${id}`,
           {
             signal: controller.signal,
           }
@@ -72,7 +73,7 @@ function StudentProfile() {
 
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/students/${id}/contact`,
+        `${API_URL}/students/${id}/contact`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
