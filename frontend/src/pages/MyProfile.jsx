@@ -213,11 +213,11 @@ function MyProfile() {
                 required
                 className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white outline-none focus:border-gray-900"
               >
-                <option value="BS(CS)">BS(CS)</option>
-                <option value="BS(AI)">BS(AI)</option>
-                <option value="BS(CB)">BS(CB)</option>
-                <option value="BS(SE)">BS(SE)</option>
-                <option value="BE(SE)">BE(SE)</option>
+                <option value="BSCS">BSCS</option>
+                <option value="BSAI">BSAI</option>
+                <option value="BSCB">BSCB</option>
+                <option value="BSSE">BSSE</option>
+                <option value="BESE">BESE</option>
               </select>
             </div>
 
