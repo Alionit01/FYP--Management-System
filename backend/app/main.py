@@ -15,7 +15,8 @@ from .schemas import (
     TeamCreate,
     StudentLogin,
     StudentUpdate,
-    TeamUpdate
+    TeamUpdate,
+    MAX_TEAM_MEMBERS
 )
 from .auth import hash_password, verify_password, create_access_token
 from fastapi import FastAPI, HTTPException, Depends
@@ -344,11 +345,20 @@ def create_team(
                 detail="Invalid department preference"
             )
 
-        # Validate spots
+        # Validate spots (team total can never exceed MAX_TEAM_MEMBERS)
         if team.spots_available < 0:
             raise HTTPException(
                 status_code=400,
                 detail="Available spots cannot be negative"
+            )
+        if team.spots_available > MAX_TEAM_MEMBERS - 1:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"A team can have at most {MAX_TEAM_MEMBERS} members "
+                    f"including the owner, so spots available cannot "
+                    f"exceed {MAX_TEAM_MEMBERS - 1}."
+                )
             )
 
         # Create team
@@ -444,6 +454,15 @@ def update_team(
         team.project_title = team_data.project_title
         team.description = team_data.description
         team.department_preference = team_data.department_preference
+        if team_data.spots_available > MAX_TEAM_MEMBERS - 1:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"A team can have at most {MAX_TEAM_MEMBERS} members "
+                    f"including the owner, so spots available cannot "
+                    f"exceed {MAX_TEAM_MEMBERS - 1}."
+                )
+            )
         team.spots_available = team_data.spots_available
         team.skills_needed = team_data.skills_needed
         team.roles_needed = team_data.roles_needed
@@ -696,6 +715,18 @@ def add_team_member(
             detail="Student is already a member of this team"
         )
 
+    current_members = db.query(models.TeamMember).filter(
+        models.TeamMember.team_id == team_id
+    ).count()
+    if current_members >= MAX_TEAM_MEMBERS:
+        db.close()
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"This team already has the maximum of "
+                f"{MAX_TEAM_MEMBERS} members"
+            )
+        )
     if team.spots_available <= 0:
         db.close()
         raise HTTPException(
@@ -866,6 +897,19 @@ def add_team_member(
             detail="Student is already a member of another team"
         )
 
+    # Check hard member cap (owner + members can never exceed MAX_TEAM_MEMBERS)
+    current_members = db.query(models.TeamMember).filter(
+        models.TeamMember.team_id == team_id
+    ).count()
+    if current_members >= MAX_TEAM_MEMBERS:
+        db.close()
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"This team already has the maximum of "
+                f"{MAX_TEAM_MEMBERS} members"
+            )
+        )
     # Check available spots
     if team.spots_available <= 0:
         db.close()

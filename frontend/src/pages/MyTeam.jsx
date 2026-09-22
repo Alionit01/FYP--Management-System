@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, UserPlus, UserMinus } from "lucide-react";
 import API_URL from "../api";
 
+const MAX_TEAM_MEMBERS = 4;
+
 function MyTeam() {
   const navigate = useNavigate();
 
@@ -415,7 +417,7 @@ function MyTeam() {
           </div>
 
           {/* Add Member */}
-          {isOwner && (
+          {isOwner && members.length < MAX_TEAM_MEMBERS && (
             <div className="mt-6 pt-6 border-t border-gray-100">
 
               <h3 className="text-sm font-semibold text-gray-900 mb-3">
@@ -449,6 +451,16 @@ function MyTeam() {
                 </button>
 
               </div>
+            </div>
+          )}
+
+          {/* Team full */}
+          {isOwner && members.length >= MAX_TEAM_MEMBERS && (
+            <div className="mt-6 pt-6 border-t border-gray-100">
+              <p className="text-sm text-gray-500">
+                This team is full ({MAX_TEAM_MEMBERS} members maximum).
+                Remove a member to add someone else.
+              </p>
             </div>
           )}
         </div>

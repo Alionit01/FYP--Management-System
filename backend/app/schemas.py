@@ -2,6 +2,8 @@ from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 
 
+
+MAX_TEAM_MEMBERS = 4
 PROGRAMS = {
     "BSCS",
     "BSAI",
@@ -42,7 +44,7 @@ class TeamCreate(BaseModel):
 
     spots_available: int = Field(
         ge=0,
-        le=20
+        le=MAX_TEAM_MEMBERS - 1
     )
 
     skills_needed: Optional[str] = Field(default=None, max_length=1000)
@@ -73,7 +75,7 @@ class TeamUpdate(BaseModel):
     project_title: Optional[str] = Field(default=None, max_length=200)
     description: Optional[str] = Field(default=None, max_length=2000)
     department_preference: str
-    spots_available: int = Field(ge=0, le=20)
+    spots_available: int = Field(ge=0, le=MAX_TEAM_MEMBERS - 1)
     skills_needed: Optional[str] = Field(default=None, max_length=1000)
     roles_needed: Optional[str] = Field(default=None, max_length=1000)
     contact: Optional[str] = Field(default=None, max_length=200)
