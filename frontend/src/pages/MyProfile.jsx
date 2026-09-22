@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import API_URL from "../api";
 
 function MyProfile() {
   const [profile, setProfile] = useState(null);
@@ -13,7 +14,7 @@ function MyProfile() {
   const token = localStorage.getItem("access_token");
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/my-profile", {
+    fetch(`${API_URL}/my-profile`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -69,7 +70,7 @@ function MyProfile() {
 
     try {
       const response = await fetch(
-        "http://127.0.0.1:8000/my-profile",
+        `${API_URL}/my-profile`,
         {
           method: "PUT",
           headers: {

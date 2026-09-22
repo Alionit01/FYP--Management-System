@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import API_URL from "../api";
 
 function Teams() {
   const [teams, setTeams] = useState([]);
@@ -8,7 +9,7 @@ function Teams() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/teams")
+    fetch(`${API_URL}/teams`)
       .then((response) => response.json())
       .then((data) => {
         setTeams(data);

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import API_URL from "../api";
 
 function CreateTeam() {
   const navigate = useNavigate();
@@ -34,7 +35,7 @@ function CreateTeam() {
     const token = localStorage.getItem("access_token");
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/teams", {
+      const response = await fetch("${API_URL}/teams", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

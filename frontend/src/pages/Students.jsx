@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import API_URL from "../api";
 
 function Students() {
   const [students, setStudents] = useState([]);
@@ -9,7 +10,7 @@ function Students() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/students")
+    fetch(`${API_URL}/students`)
       .then((response) => response.json())
       .then((data) => {
         setStudents(data);
