@@ -67,3 +67,13 @@ class StudentUpdate(BaseModel):
     skills: Optional[str] = Field(default=None, max_length=1000)
     interests: Optional[str] = Field(default=None, max_length=1000)
     fyp_status: Optional[str] = None
+
+class TeamUpdate(BaseModel):
+    name: str = Field(min_length=2, max_length=100)
+    project_title: Optional[str] = Field(default=None, max_length=200)
+    description: Optional[str] = Field(default=None, max_length=2000)
+    department_preference: str
+    spots_available: int = Field(ge=0, le=20)
+    skills_needed: Optional[str] = Field(default=None, max_length=1000)
+    roles_needed: Optional[str] = Field(default=None, max_length=1000)
+    contact: Optional[str] = Field(default=None, max_length=200)

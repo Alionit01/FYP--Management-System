@@ -3,13 +3,19 @@ import os
 from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
 
+from sqlalchemy.orm import Session
+
+from .database import SessionLocal
+from . import schemas
+
 from .database import engine, Base
 from . import models, database
 from .schemas import (
     StudentCreate,
     TeamCreate,
     StudentLogin,
-    StudentUpdate
+    StudentUpdate,
+    TeamUpdate
 )
 from .auth import hash_password, verify_password, create_access_token
 from fastapi import FastAPI, HTTPException, Depends
@@ -388,6 +394,128 @@ def create_team(
             status_code=500,
             detail="Could not create team"
         )
+
+    finally:
+        db.close()
+
+@app.put("/teams/{team_id}")
+def update_team(
+    team_id: int,
+    team_data: schemas.TeamUpdate,
+    current_student: models.Student = Depends(
+        get_current_student
+    )
+):
+    db: Session = SessionLocal()
+
+    try:
+        team = db.query(models.Team).filter(
+            models.Team.id == team_id
+        ).first()
+
+        if not team:
+            raise HTTPException(
+                status_code=404,
+                detail="Team not found"
+            )
+
+        if team.created_by != current_student.id:
+            raise HTTPException(
+                status_code=403,
+                detail="Only the team owner can edit the team"
+            )
+
+        valid_departments = {
+            "BSCS",
+            "BSAI",
+            "BSCB",
+            "BSSE",
+            "BESE",
+            "Any",
+        }
+
+        if team_data.department_preference not in valid_departments:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid department preference"
+            )
+
+        team.name = team_data.name
+        team.project_title = team_data.project_title
+        team.description = team_data.description
+        team.department_preference = team_data.department_preference
+        team.spots_available = team_data.spots_available
+        team.skills_needed = team_data.skills_needed
+        team.roles_needed = team_data.roles_needed
+        team.contact = team_data.contact
+
+        db.commit()
+        db.refresh(team)
+
+        return {
+            "message": "Team updated successfully",
+            "team": {
+                "id": team.id,
+                "name": team.name,
+                "project_title": team.project_title,
+                "description": team.description,
+                "department_preference": team.department_preference,
+                "spots_available": team.spots_available,
+                "skills_needed": team.skills_needed,
+                "roles_needed": team.roles_needed,
+                "contact": team.contact,
+                "created_by": team.created_by,
+            }
+        }
+
+    finally:
+        db.close()
+
+@app.delete("/teams/{team_id}/members/me")
+def leave_team(
+    team_id: int,
+    current_student: models.Student = Depends(
+        get_current_student
+    )
+):
+    db: Session = SessionLocal()
+
+    try:
+        membership = db.query(models.TeamMember).filter(
+            models.TeamMember.team_id == team_id,
+            models.TeamMember.student_id == current_student.id
+        ).first()
+
+        if not membership:
+            raise HTTPException(
+                status_code=404,
+                detail="You are not a member of this team"
+            )
+
+        team = db.query(models.Team).filter(
+            models.Team.id == team_id
+        ).first()
+
+        if not team:
+            raise HTTPException(
+                status_code=404,
+                detail="Team not found"
+            )
+
+        if team.created_by == current_student.id:
+            raise HTTPException(
+                status_code=400,
+                detail="Team owner cannot leave the team"
+            )
+
+        db.delete(membership)
+        team.spots_available += 1
+
+        db.commit()
+
+        return {
+            "message": "You left the team successfully"
+        }
 
     finally:
         db.close()
