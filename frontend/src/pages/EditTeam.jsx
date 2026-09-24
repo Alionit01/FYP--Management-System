@@ -113,37 +113,37 @@ function EditTeam() {
 
   if (loading) {
     return (
-      <main className="max-w-3xl mx-auto px-4 py-10">
-        <p className="text-gray-500">Loading team...</p>
+      <main className="page-container max-w-3xl">
+        <p className="text-zinc-500">Loading team...</p>
       </main>
     );
   }
 
   return (
-    <main className="max-w-3xl mx-auto px-4 py-8 pb-24 md:pb-10">
+    <main className="page-container max-w-3xl">
       <button
         onClick={() => navigate(`/teams/${id}`)}
-        className="text-sm text-gray-500 hover:text-gray-900 mb-6"
+        className="text-sm font-medium text-zinc-500 hover:text-zinc-900 mb-6 transition-colors"
       >
         ← Back to Team
       </button>
 
       <div className="mb-8">
-        <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+        <p className="eyebrow">
           Team
         </p>
 
-        <h1 className="text-3xl font-bold mt-2">
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mt-2">
           Edit Team
         </h1>
       </div>
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 space-y-6"
+        className="card p-6 sm:p-8 space-y-6"
       >
         <div>
-          <label className="block text-sm font-medium mb-2">
+          <label className="block text-sm font-medium text-zinc-700 mb-2">
             Team Name
           </label>
 
@@ -152,12 +152,12 @@ function EditTeam() {
             value={form.name}
             onChange={handleChange}
             required
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+            className="input-field"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">
+          <label className="block text-sm font-medium text-zinc-700 mb-2">
             Project Title
           </label>
 
@@ -165,12 +165,12 @@ function EditTeam() {
             name="project_title"
             value={form.project_title}
             onChange={handleChange}
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+            className="input-field"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">
+          <label className="block text-sm font-medium text-zinc-700 mb-2">
             About Project
           </label>
 
@@ -179,12 +179,12 @@ function EditTeam() {
             value={form.description}
             onChange={handleChange}
             rows={5}
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900 resize-none"
+            className="input-field resize-none"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">
+          <label className="block text-sm font-medium text-zinc-700 mb-2">
             Department Preference
           </label>
 
@@ -192,7 +192,7 @@ function EditTeam() {
             name="department_preference"
             value={form.department_preference}
             onChange={handleChange}
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white"
+            className="input-field"
           >
             {programs.map((program) => (
               <option key={program} value={program}>
@@ -203,7 +203,7 @@ function EditTeam() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">
+          <label className="block text-sm font-medium text-zinc-700 mb-2">
             Additional Spots Available
           </label>
 
@@ -214,12 +214,12 @@ function EditTeam() {
             max="20"
             value={form.spots_available}
             onChange={handleChange}
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+            className="input-field"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">
+          <label className="block text-sm font-medium text-zinc-700 mb-2">
             Skills Needed
           </label>
 
@@ -228,12 +228,12 @@ function EditTeam() {
             value={form.skills_needed}
             onChange={handleChange}
             placeholder="React, Python, UI/UX..."
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+            className="input-field"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">
+          <label className="block text-sm font-medium text-zinc-700 mb-2">
             Roles Needed
           </label>
 
@@ -242,12 +242,12 @@ function EditTeam() {
             value={form.roles_needed}
             onChange={handleChange}
             placeholder="Frontend, Backend, ML..."
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+            className="input-field"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">
+          <label className="block text-sm font-medium text-zinc-700 mb-2">
             Contact
           </label>
 
@@ -256,7 +256,7 @@ function EditTeam() {
             value={form.contact}
             onChange={handleChange}
             placeholder="WhatsApp or other contact"
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+            className="input-field"
           />
         </div>
 
@@ -269,7 +269,7 @@ function EditTeam() {
         <button
           type="submit"
           disabled={saving}
-          className="w-full bg-gray-900 text-white py-3 rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50"
+          className="primary-button w-full !py-3"
         >
           {saving ? "Saving..." : "Save Changes"}
         </button>

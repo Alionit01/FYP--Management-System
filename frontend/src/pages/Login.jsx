@@ -63,7 +63,7 @@ function Login() {
     <main className="min-h-[calc(100vh-56px)] md:min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-10 pb-24 md:pb-10">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+          <p className="eyebrow">
             FYP Finder
           </p>
 
@@ -71,18 +71,18 @@ function Login() {
             Welcome back
           </h1>
 
-          <p className="mt-3 text-gray-600">
+          <p className="mt-3 text-zinc-600">
             Sign in to manage your profile and team.
           </p>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8"
+          className="card p-6 sm:p-8"
         >
           <div className="space-y-5">
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-zinc-700 mb-2">
                 University Email
               </label>
 
@@ -94,12 +94,12 @@ function Login() {
                 required
                 autoComplete="email"
                 placeholder="yourname@iqra.edu.pk"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+                className="input-field"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-zinc-700 mb-2">
                 Password
               </label>
 
@@ -111,7 +111,7 @@ function Login() {
                 required
                 autoComplete="current-password"
                 placeholder="Enter your password"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+                className="input-field"
               />
             </div>
           </div>
@@ -125,16 +125,16 @@ function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-6 bg-gray-900 text-white py-3 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition"
+            className="primary-button w-full mt-6 !py-3"
           >
             {loading ? "Signing in..." : "Sign In"}
           </button>
 
-          <p className="text-sm text-gray-500 text-center mt-6">
+          <p className="text-sm text-zinc-500 text-center mt-6">
             Don't have an account?{" "}
             <Link
               to="/register"
-              className="font-medium text-gray-900 hover:underline"
+              className="font-medium text-zinc-900 hover:underline"
             >
               Create one
             </Link>

@@ -40,11 +40,11 @@ function Teams() {
   });
 
   return (
-    <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 pb-24 md:pb-10">
+    <main className="page-container">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-8">
         <div>
-          <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+          <p className="eyebrow">
             Directory
           </p>
 
@@ -52,7 +52,7 @@ function Teams() {
             Find a Team
           </h1>
 
-          <p className="mt-3 text-gray-600 max-w-2xl">
+          <p className="mt-3 text-zinc-600 max-w-2xl leading-relaxed">
             Explore FYP teams, see what they are building, and find out which
             skills and roles they need.
           </p>
@@ -60,17 +60,17 @@ function Teams() {
 
         <Link
           to="/teams/create"
-          className="inline-flex items-center !text-white justify-center bg-gray-900 text-white px-5 py-3 rounded-lg font-medium text-sm hover:bg-gray-800 transition shrink-0"
+          className="primary-button shrink-0"
         >
           Create Team
         </Link>
       </div>
 
       {/* Filters */}
-      <section className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 mb-8">
+      <section className="card p-4 sm:p-5 mb-8">
         <div className="grid gap-4 md:grid-cols-3">
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-medium text-zinc-700 mb-2">
               Search
             </label>
 
@@ -79,19 +79,19 @@ function Teams() {
               placeholder="Team name, project, skills, roles..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+              className="input-field"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-medium text-zinc-700 mb-2">
               Department
             </label>
 
             <select
               value={program}
               onChange={(e) => setProgram(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white outline-none focus:border-gray-900"
+              className="input-field"
             >
               <option value="All">All Departments</option>
               <option value="BSCS">BSCS</option>
@@ -106,7 +106,7 @@ function Teams() {
 
       {/* Result count */}
       <div className="mb-4">
-        <p className="text-sm text-gray-500">
+        <p className="text-sm font-medium text-zinc-500">
           {filteredTeams.length}{" "}
           {filteredTeams.length === 1 ? "team" : "teams"}
         </p>
@@ -114,17 +114,17 @@ function Teams() {
 
       {/* Loading */}
       {loading && (
-        <div className="py-12 text-center text-gray-500">
+        <div className="card py-12 text-center text-zinc-500">
           Loading teams...
         </div>
       )}
 
       {/* Empty */}
       {!loading && filteredTeams.length === 0 && (
-        <div className="border border-dashed border-gray-300 rounded-xl p-10 text-center">
-          <h2 className="font-semibold text-lg">No teams found</h2>
+        <div className="border border-dashed border-zinc-300 rounded-2xl p-10 text-center">
+          <h2 className="font-semibold text-lg text-zinc-900">No teams found</h2>
 
-          <p className="mt-2 text-gray-500">
+          <p className="mt-2 text-zinc-500">
             Try changing your search or department filter.
           </p>
         </div>
@@ -132,19 +132,23 @@ function Teams() {
 
       {/* Teams */}
       {!loading && filteredTeams.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch">
           {filteredTeams.map((team) => (
             <article
               key={team.id}
-              className="bg-white border border-gray-300 rounded-xl p-5 flex flex-col h-full hover:border-gray-400 transition"
+              className="card p-5 sm:p-6 flex flex-col h-full transition-shadow hover:shadow-md"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h2 className="text-lg font-semibold truncate">
+                  <p className="eyebrow">
+                    Team
+                  </p>
+
+                  <h2 className="mt-1 text-lg font-semibold text-zinc-900 truncate">
                     {team.name}
                   </h2>
 
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-xs font-medium text-zinc-500 mt-1">
                     {team.department_preference === "Any"
                       ? "Open to all departments"
                       : team.department_preference}
@@ -152,10 +156,10 @@ function Teams() {
                 </div>
 
                 <span
-                  className={`text-xs font-medium px-2.5 py-1 rounded-full border shrink-0 ${
+                  className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${
                     team.spots_available > 0
-                      ? "border-gray-200 text-gray-600"
-                      : "border-gray-300 text-gray-400"
+                      ? "bg-zinc-900 text-white"
+                      : "bg-zinc-100 text-zinc-500"
                   }`}
                 >
                   {team.spots_available > 0
@@ -167,26 +171,28 @@ function Teams() {
               </div>
 
               {team.project_title && (
-                <h3 className="mt-5 font-medium">{team.project_title}</h3>
+                <h3 className="mt-5 text-base font-semibold text-zinc-900 leading-snug">
+                  {team.project_title}
+                </h3>
               )}
 
               {team.description && (
-                <p className="mt-2 text-sm text-gray-600 leading-relaxed line-clamp-3">
+                <p className="mt-2 text-sm text-zinc-600 leading-relaxed line-clamp-3">
                   {team.description}
                 </p>
               )}
 
               {team.skills_needed && (
   <div className="mt-5">
-    <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
+    <p className="eyebrow">
       Skills needed
     </p>
 
-    <div className="flex flex-wrap gap-2 mt-2">
+    <div className="flex flex-wrap gap-1.5 mt-2">
       {team.skills_needed.split(",").map((skill, index) => (
         <span
           key={index}
-          className="text-xs font-medium bg-gray-100 text-gray-700 px-2.5 py-1 rounded-full"
+          className="tag"
         >
           {skill.trim()}
         </span>
@@ -197,15 +203,15 @@ function Teams() {
 
               {team.roles_needed && (
   <div className="mt-4">
-    <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
+    <p className="eyebrow">
       Roles needed
     </p>
 
-    <div className="flex flex-wrap gap-2 mt-2">
+    <div className="flex flex-wrap gap-1.5 mt-2">
       {team.roles_needed.split(",").map((role, index) => (
         <span
           key={index}
-          className="text-xs font-medium bg-gray-100 text-gray-700 px-2.5 py-1 rounded-full"
+          className="tag"
         >
           {role.trim()}
         </span>
@@ -217,7 +223,7 @@ function Teams() {
               {/* View Team */}
               <Link
                 to={`/teams/${team.id}`}
-                className="block mt-auto pt-5 text-center border border-gray-300 rounded-lg py-2.5 text-sm font-medium hover:bg-gray-50 transition"
+                className="secondary-button w-full mt-auto pt-2.5"
               >
                 View Team
               </Link>

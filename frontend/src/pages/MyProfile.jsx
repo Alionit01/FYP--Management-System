@@ -113,16 +113,16 @@ function MyProfile() {
 
   if (loading) {
     return (
-      <main className="max-w-3xl mx-auto px-4 py-10 pb-24 md:pb-10">
-        <p className="text-gray-500">Loading your profile...</p>
+      <main className="page-container max-w-3xl">
+        <p className="text-zinc-500">Loading your profile...</p>
       </main>
     );
   }
 
   if (!profile || !form) {
     return (
-      <main className="max-w-3xl mx-auto px-4 py-10 pb-24 md:pb-10">
-        <div className="border border-red-200 bg-red-50 rounded-xl p-6">
+      <main className="page-container max-w-3xl">
+        <div className="border border-red-200 bg-red-50 rounded-2xl p-6">
           <p className="text-red-700">
             {error || "Could not load your profile."}
           </p>
@@ -132,9 +132,9 @@ function MyProfile() {
   }
 
   return (
-    <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 pb-24 md:pb-10">
+    <main className="page-container max-w-3xl">
       <div className="mb-8">
-        <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+        <p className="eyebrow">
           Account
         </p>
 
@@ -142,7 +142,7 @@ function MyProfile() {
           My Profile
         </h1>
 
-        <p className="mt-3 text-gray-600">
+        <p className="mt-3 text-zinc-600 leading-relaxed">
           Keep your information up to date so other students can
           find you.
         </p>
@@ -150,17 +150,17 @@ function MyProfile() {
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-8"
+        className="card p-5 sm:p-8"
       >
         {/* Basic information */}
         <section>
-          <h2 className="text-xl font-semibold">
+          <h2 className="text-lg font-semibold text-zinc-900">
             Basic Information
           </h2>
 
           <div className="mt-5 space-y-5">
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-zinc-700 mb-2">
                 Name
               </label>
 
@@ -170,13 +170,13 @@ function MyProfile() {
                 value={form.name}
                 onChange={handleChange}
                 required
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+                className="input-field"
               />
             </div>
 
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className="block text-sm font-medium text-zinc-700 mb-2">
                   University ID
                 </label>
 
@@ -184,12 +184,12 @@ function MyProfile() {
                   type="text"
                   value={profile.university_id}
                   disabled
-                  className="w-full border border-gray-200 bg-gray-50 text-gray-500 rounded-lg px-4 py-3"
+                  className="input-field"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className="block text-sm font-medium text-zinc-700 mb-2">
                   University Email
                 </label>
 
@@ -197,13 +197,13 @@ function MyProfile() {
                   type="text"
                   value={profile.email}
                   disabled
-                  className="w-full border border-gray-200 bg-gray-50 text-gray-500 rounded-lg px-4 py-3"
+                  className="input-field"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-zinc-700 mb-2">
                 Program
               </label>
 
@@ -212,7 +212,7 @@ function MyProfile() {
                 value={form.program}
                 onChange={handleChange}
                 required
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white outline-none focus:border-gray-900"
+                className="input-field"
               >
                 <option value="BSCS">BSCS</option>
                 <option value="BSAI">BSAI</option>
@@ -223,7 +223,7 @@ function MyProfile() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-zinc-700 mb-2">
                 FYP Status
               </label>
 
@@ -231,7 +231,7 @@ function MyProfile() {
                 name="fyp_status"
                 value={form.fyp_status}
                 onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white outline-none focus:border-gray-900"
+                className="input-field"
               >
                 <option value="">
                   Select your current status
@@ -247,17 +247,17 @@ function MyProfile() {
           </div>
         </section>
 
-        <div className="my-8 border-t border-gray-200" />
+        <div className="my-8 border-t border-zinc-100" />
 
         {/* About */}
         <section>
-          <h2 className="text-xl font-semibold">
+          <h2 className="text-lg font-semibold text-zinc-900">
             About You
           </h2>
 
           <div className="mt-5 space-y-5">
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-zinc-700 mb-2">
                 Profile Picture URL
               </label>
 
@@ -267,12 +267,12 @@ function MyProfile() {
                 value={form.profile_picture}
                 onChange={handleChange}
                 placeholder="https://..."
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+                className="input-field"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-zinc-700 mb-2">
                 Bio
               </label>
 
@@ -282,12 +282,12 @@ function MyProfile() {
                 onChange={handleChange}
                 rows="4"
                 placeholder="Tell other students a little about yourself..."
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900 resize-none"
+                className="input-field resize-none"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-zinc-700 mb-2">
                 Skills
               </label>
 
@@ -297,12 +297,12 @@ function MyProfile() {
                 value={form.skills}
                 onChange={handleChange}
                 placeholder="e.g. Python, React, SQL, UI/UX"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+                className="input-field"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-zinc-700 mb-2">
                 Interests
               </label>
 
@@ -312,23 +312,23 @@ function MyProfile() {
                 value={form.interests}
                 onChange={handleChange}
                 placeholder="e.g. AI, Web Development, Cybersecurity"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+                className="input-field"
               />
             </div>
           </div>
         </section>
 
-        <div className="my-8 border-t border-gray-200" />
+        <div className="my-8 border-t border-zinc-100" />
 
         {/* Links */}
         <section>
-          <h2 className="text-xl font-semibold">
+          <h2 className="text-lg font-semibold text-zinc-900">
             Links & Contact
           </h2>
 
           <div className="mt-5 space-y-5">
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-zinc-700 mb-2">
                 GitHub
               </label>
 
@@ -338,12 +338,12 @@ function MyProfile() {
                 value={form.github}
                 onChange={handleChange}
                 placeholder="https://github.com/username"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+                className="input-field"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-zinc-700 mb-2">
                 LinkedIn
               </label>
 
@@ -353,12 +353,12 @@ function MyProfile() {
                 value={form.linkedin}
                 onChange={handleChange}
                 placeholder="https://linkedin.com/in/username"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+                className="input-field"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-zinc-700 mb-2">
                 WhatsApp
               </label>
 
@@ -368,10 +368,10 @@ function MyProfile() {
                 value={form.whatsapp}
                 onChange={handleChange}
                 placeholder="Your WhatsApp number"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+                className="input-field"
               />
 
-              <p className="text-xs text-gray-400 mt-2">
+              <p className="text-xs text-zinc-400 mt-2">
                 Your contact details are not shown publicly.
               </p>
             </div>
@@ -385,16 +385,16 @@ function MyProfile() {
         )}
 
         {message && (
-          <div className="mt-7 border border-gray-200 bg-gray-50 text-gray-700 rounded-lg px-4 py-3 text-sm">
+          <div className="mt-7 border border-zinc-200 bg-zinc-50 text-zinc-700 rounded-lg px-4 py-3 text-sm">
             {message}
           </div>
         )}
 
-        <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end">
+        <div className="mt-8 pt-6 border-t border-zinc-100 flex justify-end">
           <button
             type="submit"
             disabled={saving}
-            className="w-full sm:w-auto bg-gray-900 text-white px-6 py-3 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition"
+            className="primary-button w-full sm:w-auto !px-6 !py-3"
           >
             {saving ? "Saving..." : "Save Changes"}
           </button>

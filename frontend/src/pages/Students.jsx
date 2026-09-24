@@ -43,11 +43,11 @@ function Students() {
   });
 
   return (
-    <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 pb-24 md:pb-10">
+    <main className="page-container">
 
       {/* Header */}
       <div className="mb-8">
-        <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+        <p className="eyebrow">
           Directory
         </p>
 
@@ -55,19 +55,19 @@ function Students() {
           Find Students
         </h1>
 
-        <p className="mt-3 text-gray-600 max-w-2xl">
+        <p className="mt-3 text-zinc-600 max-w-2xl leading-relaxed">
           Browse students by program, skills, interests, and
           FYP status.
         </p>
       </div>
 
       {/* Filters */}
-      <section className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 mb-8">
+      <section className="card p-4 sm:p-5 mb-8">
 
         <div className="grid gap-4 md:grid-cols-3">
 
           <div className="md:col-span-1">
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-medium text-zinc-700 mb-2">
               Search
             </label>
 
@@ -76,19 +76,19 @@ function Students() {
               placeholder="Name, skills, interests..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+              className="input-field"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-medium text-zinc-700 mb-2">
               Program
             </label>
 
             <select
               value={program}
               onChange={(e) => setProgram(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white outline-none focus:border-gray-900"
+              className="input-field"
             >
               <option value="All">All Programs</option>
               <option value="BSCS">BSCS</option>
@@ -100,14 +100,14 @@ function Students() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-medium text-zinc-700 mb-2">
               FYP Status
             </label>
 
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white outline-none focus:border-gray-900"
+              className="input-field"
             >
               <option value="All">All Statuses</option>
               <option value="Looking for a team">
@@ -123,8 +123,8 @@ function Students() {
       </section>
 
       {/* Results header */}
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-gray-500">
+      <div className="flex items-baseline justify-between mb-4">
+        <p className="text-sm font-medium text-zinc-500">
           {filteredStudents.length}{" "}
           {filteredStudents.length === 1
             ? "student"
@@ -134,19 +134,19 @@ function Students() {
 
       {/* Loading */}
       {loading && (
-        <div className="py-12 text-center text-gray-500">
+        <div className="card py-12 text-center text-zinc-500">
           Loading students...
         </div>
       )}
 
       {/* Empty */}
       {!loading && filteredStudents.length === 0 && (
-        <div className="border border-dashed border-gray-300 rounded-xl p-10 text-center">
-          <h2 className="font-semibold text-lg">
+        <div className="border border-dashed border-zinc-300 rounded-2xl p-10 text-center">
+          <h2 className="font-semibold text-lg text-zinc-900">
             No students found
           </h2>
 
-          <p className="mt-2 text-gray-500">
+          <p className="mt-2 text-zinc-500">
             Try changing your search or filters.
           </p>
         </div>
@@ -154,12 +154,12 @@ function Students() {
 
       {/* Students */}
       {!loading && filteredStudents.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
 
           {filteredStudents.map((student) => (
             <article
               key={student.id}
-              className="bg-white border border-gray-300 rounded-xl p-5 flex flex-col hover:border-gray-400 transition"
+              className="card p-5 flex flex-col transition-shadow hover:shadow-md"
             >
 
               <div className="flex items-start gap-4">
@@ -169,10 +169,10 @@ function Students() {
                   <img
                     src={student.profile_picture}
                     alt={student.name}
-                    className="w-12 h-12 rounded-full object-cover shrink-0"
+                    className="w-12 h-12 rounded-full object-cover shrink-0 ring-1 ring-zinc-200"
                   />
                 ) : (
-                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center font-semibold text-gray-700 shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center font-semibold text-zinc-700 shrink-0 ring-1 ring-zinc-200">
                     {student.name
                       .charAt(0)
                       .toUpperCase()}
@@ -180,11 +180,11 @@ function Students() {
                 )}
 
                 <div className="min-w-0">
-                  <h2 className="font-semibold text-lg truncate">
+                  <h2 className="font-semibold text-base text-zinc-900 truncate">
                     {student.name}
                   </h2>
 
-                  <p className="text-sm text-gray-500">
+                  <p className="text-xs font-medium text-zinc-500 mt-0.5">
                     {student.program}
                   </p>
                 </div>
@@ -192,24 +192,24 @@ function Students() {
               </div>
 
               {student.fyp_status && (
-                <span className="inline-block mt-4 text-xs font-medium border border-gray-200 rounded-full px-3 py-1">
+                <span className="badge self-start mt-4">
                   {student.fyp_status}
                 </span>
               )}
 
               {student.skills && (
-  <div className="mt-4">
-    <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
+  <div className="mt-5">
+    <p className="eyebrow">
       Skills
     </p>
 
-    <div className="flex flex-wrap gap-2 mt-2">
+    <div className="flex flex-wrap gap-1.5 mt-2">
       {student.skills
         .split(",")
         .map((skill, index) => (
           <span
             key={index}
-            className="text-xs font-medium bg-gray-100 text-gray-700 px-2.5 py-1 rounded-full"
+            className="tag"
           >
             {skill.trim()}
           </span>
@@ -219,12 +219,12 @@ function Students() {
 )}
 
               {student.interests && (
-                <div className="mt-3">
-                  <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
+                <div className="mt-4">
+                  <p className="eyebrow">
                     Interests
                   </p>
 
-                  <p className="mt-1 text-sm text-gray-600 line-clamp-2">
+                  <p className="mt-1.5 text-sm text-zinc-600 leading-relaxed line-clamp-2">
                     {student.interests}
                   </p>
                 </div>
@@ -233,7 +233,7 @@ function Students() {
               {/* View Profile */}
               <Link
                 to={`/students/${student.id}`}
-                className="block mt-auto pt-5 text-center border border-gray-300 rounded-lg py-2.5 text-sm font-medium hover:bg-gray-50 transition"
+                className="secondary-button w-full mt-auto pt-2.5"
               >
                 View Profile
               </Link>

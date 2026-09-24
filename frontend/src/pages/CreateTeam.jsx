@@ -63,16 +63,16 @@ function CreateTeam() {
   };
 
   return (
-    <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 pb-24 md:pb-10">
+    <main className="page-container max-w-3xl">
       <div className="mb-8">
         <button
           onClick={() => navigate("/teams")}
-          className="text-sm text-gray-500 hover:text-gray-900"
+          className="text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors"
         >
           ← Back to Teams
         </button>
 
-        <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide mt-7">
+        <p className="eyebrow mt-7">
           Team Setup
         </p>
 
@@ -80,7 +80,7 @@ function CreateTeam() {
           Create a Team
         </h1>
 
-        <p className="mt-3 text-gray-600">
+        <p className="mt-3 text-zinc-600 leading-relaxed">
           Create your FYP team and let other students know what
           you're looking for.
         </p>
@@ -88,11 +88,11 @@ function CreateTeam() {
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-8"
+        className="card p-5 sm:p-8"
       >
         <div className="space-y-6">
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-medium text-zinc-700 mb-2">
               Team Name *
             </label>
 
@@ -103,12 +103,12 @@ function CreateTeam() {
               onChange={handleChange}
               required
               placeholder="e.g. Team Alpha"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+              className="input-field"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-medium text-zinc-700 mb-2">
               Project Title
             </label>
 
@@ -118,12 +118,12 @@ function CreateTeam() {
               value={form.project_title}
               onChange={handleChange}
               placeholder="Leave empty if not decided yet"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+              className="input-field"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-medium text-zinc-700 mb-2">
               About the Project
             </label>
 
@@ -133,13 +133,13 @@ function CreateTeam() {
               onChange={handleChange}
               rows="4"
               placeholder="Briefly describe your project or idea..."
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900 resize-none"
+              className="input-field resize-none"
             />
           </div>
 
           <div className="grid gap-6 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-zinc-700 mb-2">
                 Department Preference *
               </label>
 
@@ -148,7 +148,7 @@ function CreateTeam() {
                 value={form.department_preference}
                 onChange={handleChange}
                 required
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white outline-none focus:border-gray-900"
+                className="input-field"
               >
                 <option value="Any">Any Department</option>
                 <option value="BSCS">BSCS</option>
@@ -160,7 +160,7 @@ function CreateTeam() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-zinc-700 mb-2">
                 Available Spots *
               </label>
 
@@ -171,17 +171,17 @@ function CreateTeam() {
                 onChange={handleChange}
                 min="0"
                 required
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+                className="input-field"
               />
 
-              <p className="text-xs text-gray-400 mt-2">
+              <p className="text-xs text-zinc-400 mt-2">
                 Number of additional members you need.
               </p>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-medium text-zinc-700 mb-2">
               Skills Needed
             </label>
 
@@ -191,12 +191,12 @@ function CreateTeam() {
               value={form.skills_needed}
               onChange={handleChange}
               placeholder="e.g. React, Python, UI/UX, Machine Learning"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+              className="input-field"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-medium text-zinc-700 mb-2">
               Roles Needed
             </label>
 
@@ -206,12 +206,12 @@ function CreateTeam() {
               value={form.roles_needed}
               onChange={handleChange}
               placeholder="e.g. Frontend Developer, ML Developer"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+              className="input-field"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-medium text-zinc-700 mb-2">
               Contact
             </label>
 
@@ -221,10 +221,10 @@ function CreateTeam() {
               value={form.contact}
               onChange={handleChange}
               placeholder="WhatsApp number or other contact"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+              className="input-field"
             />
 
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-xs text-zinc-400 mt-2">
               This will only be shown to logged-in students.
             </p>
           </div>
@@ -236,11 +236,11 @@ function CreateTeam() {
           </div>
         )}
 
-        <div className="mt-8 pt-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+        <div className="mt-8 pt-6 border-t border-zinc-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
           <button
             type="button"
             onClick={() => navigate("/teams")}
-            className="px-5 py-3 rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50 transition"
+            className="secondary-button"
           >
             Cancel
           </button>
@@ -248,7 +248,7 @@ function CreateTeam() {
           <button
             type="submit"
             disabled={loading}
-            className="bg-gray-900 text-white px-5 py-3 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition"
+            className="primary-button"
           >
             {loading ? "Creating..." : "Create Team"}
           </button>

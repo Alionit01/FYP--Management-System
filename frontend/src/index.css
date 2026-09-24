@@ -1,11 +1,16 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
 :root {
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
 
-  color: #111827;
-  background: #f9fafb;
+  color: #18181b;
+  background: #f4f4f5;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -20,7 +25,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: #f9fafb;
+  background: #f4f4f5;
 }
 
 button,
@@ -39,17 +44,69 @@ a {
   text-decoration: none;
 }
 
-/* Primary action buttons */
+/* ------------------------------------------------------------------ */
+/* Shared UI primitives                                               */
+/* Keeps cards, buttons and inputs visually consistent across pages.  */
+/* ------------------------------------------------------------------ */
+
+/* Card: white surface, subtle border + soft elevation, layered over the
+   off-white page background so it reads as its own object. */
+.card {
+  @apply bg-white border border-zinc-200/80 rounded-2xl shadow-sm;
+}
+
+/* Page shell: consistent max width, mobile padding and bottom spacing
+   so content never collides with the mobile navigation. */
+.page-container {
+  @apply max-w-6xl mx-auto w-full px-4 sm:px-6 py-8 pb-24 md:pb-12;
+}
+
+/* Small uppercase eyebrow label used above page and card titles */
+.eyebrow {
+  @apply text-xs font-semibold uppercase tracking-wider text-zinc-400;
+}
+
+/* Primary action button */
 .primary-button {
-  background-color: #111827;
-  color: #ffffff;
-  transition: background-color 0.2s ease, transform 0.2s ease;
+  @apply inline-flex items-center justify-center gap-2 bg-zinc-900 text-white
+    text-sm font-medium px-5 py-2.5 rounded-lg border border-transparent
+    transition-colors hover:bg-zinc-700 active:bg-zinc-800;
 }
 
-.primary-button:hover {
-  background-color: #1f2937;
+.primary-button:disabled {
+  @apply opacity-50 cursor-not-allowed;
 }
 
-.primary-button:active {
-  transform: translateY(1px);
+/* Secondary action button */
+.secondary-button {
+  @apply inline-flex items-center justify-center gap-2 bg-white text-zinc-800
+    text-sm font-medium px-5 py-2.5 rounded-lg border border-zinc-300
+    transition-colors hover:bg-zinc-50 hover:border-zinc-400;
+}
+
+/* Danger action button (destructive only) */
+.danger-button {
+  @apply inline-flex items-center justify-center gap-2 bg-white text-red-600
+    text-sm font-medium px-5 py-2.5 rounded-lg border border-red-200
+    transition-colors hover:bg-red-50 hover:border-red-300;
+}
+
+/* Form control: consistent height, subtle border, clean focus ring */
+.input-field {
+  @apply w-full bg-white border border-zinc-300 rounded-lg px-4 py-3 text-sm
+    text-zinc-900 outline-none transition
+    focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10
+    disabled:bg-zinc-50 disabled:text-zinc-500 placeholder:text-zinc-400;
+}
+
+/* Muted tag / chip used for skills, interests and roles */
+.tag {
+  @apply inline-flex items-center text-xs font-medium bg-zinc-100 text-zinc-700
+    px-2.5 py-1 rounded-md;
+}
+
+/* Status badge */
+.badge {
+  @apply inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full
+    border border-zinc-200 bg-zinc-50 text-zinc-600;
 }

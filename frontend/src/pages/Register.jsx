@@ -71,7 +71,7 @@ function Register() {
     <main className="min-h-[calc(100vh-56px)] md:min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-10 pb-24 md:pb-10">
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
-          <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+          <p className="eyebrow">
             FYP Finder
           </p>
 
@@ -79,18 +79,18 @@ function Register() {
             Create your account
           </h1>
 
-          <p className="mt-3 text-gray-600">
+          <p className="mt-3 text-zinc-600">
             Use your university email to join FYP Finder.
           </p>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8"
+          className="card p-6 sm:p-8"
         >
           <div className="space-y-5">
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-zinc-700 mb-2">
                 Full Name *
               </label>
 
@@ -102,13 +102,13 @@ function Register() {
                 required
                 autoComplete="name"
                 placeholder="Your full name"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+                className="input-field"
               />
             </div>
 
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className="block text-sm font-medium text-zinc-700 mb-2">
                   University ID *
                 </label>
 
@@ -119,12 +119,12 @@ function Register() {
                   onChange={handleChange}
                   required
                   placeholder="Your roll number"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+                  className="input-field"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className="block text-sm font-medium text-zinc-700 mb-2">
                   Program *
                 </label>
 
@@ -133,7 +133,7 @@ function Register() {
                   value={form.program}
                   onChange={handleChange}
                   required
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white outline-none focus:border-gray-900"
+                  className="input-field"
                 >
                   <option value="BSCS">BSCS</option>
                   <option value="BSAI">BSAI</option>
@@ -145,7 +145,7 @@ function Register() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-zinc-700 mb-2">
                 University Email *
               </label>
 
@@ -157,16 +157,16 @@ function Register() {
                 required
                 autoComplete="email"
                 placeholder="yourname@iqra.edu.pk"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+                className="input-field"
               />
 
-              <p className="text-xs text-gray-400 mt-2">
+              <p className="text-xs text-zinc-400 mt-2">
                 Only @iqra.edu.pk email addresses can register.
               </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-zinc-700 mb-2">
                 Password *
               </label>
 
@@ -179,12 +179,12 @@ function Register() {
                 minLength="6"
                 autoComplete="new-password"
                 placeholder="At least 6 characters"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+                className="input-field"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-zinc-700 mb-2">
                 Confirm Password *
               </label>
 
@@ -195,7 +195,7 @@ function Register() {
                 required
                 autoComplete="new-password"
                 placeholder="Enter your password again"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-gray-900"
+                className="input-field"
               />
             </div>
           </div>
@@ -209,16 +209,16 @@ function Register() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-6 bg-gray-900 text-white py-3 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition"
+            className="primary-button w-full mt-6 !py-3"
           >
             {loading ? "Creating account..." : "Create Account"}
           </button>
 
-          <p className="text-sm text-gray-500 text-center mt-6">
+          <p className="text-sm text-zinc-500 text-center mt-6">
             Already have an account?{" "}
             <Link
               to="/login"
-              className="font-medium text-gray-900 hover:underline"
+              className="font-medium text-zinc-900 hover:underline"
             >
               Sign in
             </Link>

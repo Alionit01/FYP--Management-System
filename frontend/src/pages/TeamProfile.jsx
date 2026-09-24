@@ -58,16 +58,16 @@ function TeamProfile() {
 
   if (loading) {
     return (
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <p className="text-gray-500">Loading team...</p>
+      <main className="page-container max-w-4xl">
+        <p className="text-zinc-500">Loading team...</p>
       </main>
     );
   }
 
   if (!team) {
     return (
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <p className="text-gray-500">Team not found.</p>
+      <main className="page-container max-w-4xl">
+        <p className="text-zinc-500">Team not found.</p>
       </main>
     );
   }
@@ -87,42 +87,42 @@ function TeamProfile() {
     : [];
 
   return (
-    <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 pb-24 md:pb-10">
+    <main className="page-container max-w-4xl">
       {/* Back */}
       <button
         type="button"
         onClick={() => navigate("/teams")}
-        className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 cursor-pointer transition-colors"
+        className="inline-flex items-center gap-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 cursor-pointer transition-colors"
       >
         <ArrowLeft size={18} />
         <span>Back to Teams</span>
       </button>
 
       {/* Team Header */}
-      <section className="mt-6 bg-white border border-gray-300 rounded-xl p-5 sm:p-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-sm font-medium text-gray-500">
+      <section className="card mt-6 p-5 sm:p-7">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <p className="eyebrow">
               Team
             </p>
 
-            <h1 className="mt-1 text-2xl sm:text-3xl font-bold text-gray-900">
+            <h1 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 break-words">
               {team.name}
             </h1>
 
-            <p className="mt-2 text-sm text-gray-500">
+            <p className="mt-2 text-sm font-medium text-zinc-600">
               {team.department_preference === "Any"
                 ? "Open to all departments"
                 : team.department_preference}
             </p>
           </div>
 
-          <div className="flex items-center gap-3 self-start">
+          <div className="flex items-center gap-3 self-start shrink-0">
             <span
-              className={`text-sm font-medium px-3 py-1.5 rounded-full ${
+              className={`text-xs font-semibold px-3 py-1.5 rounded-full ${
                 team.spots_available > 0
-                  ? "bg-gray-100 text-gray-700"
-                  : "bg-gray-200 text-gray-500"
+                  ? "bg-zinc-900 text-white"
+                  : "bg-zinc-100 text-zinc-500"
               }`}
             >
               {team.spots_available > 0
@@ -136,7 +136,7 @@ function TeamProfile() {
               String(localStorage.getItem("student_id")) && (
               <button
                 onClick={() => navigate(`/teams/${team.id}/edit`)}
-                className="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-gray-800"
+                className="primary-button"
               >
                 Edit Team
               </button>
@@ -146,12 +146,12 @@ function TeamProfile() {
 
         {/* Project */}
         {team.project_title && (
-          <div className="mt-6">
-            <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
+          <div className="mt-7 pt-6 border-t border-zinc-100">
+            <p className="eyebrow">
               Project
             </p>
 
-            <h2 className="mt-1 text-xl font-bold text-gray-900">
+            <h2 className="mt-1.5 text-lg font-semibold text-zinc-900 leading-snug">
               {team.project_title}
             </h2>
           </div>
@@ -159,12 +159,12 @@ function TeamProfile() {
 
         {/* Description */}
         {team.description && (
-          <div className="mt-5">
-            <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
+          <div className="mt-6">
+            <p className="eyebrow">
               Description
             </p>
 
-            <p className="mt-2 text-gray-600 leading-relaxed">
+            <p className="mt-2 text-zinc-600 leading-relaxed">
               {team.description}
             </p>
           </div>
@@ -172,16 +172,16 @@ function TeamProfile() {
 
         {/* Skills */}
         {skills.length > 0 && (
-          <div className="mt-5">
-            <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
+          <div className="mt-6">
+            <p className="eyebrow">
               Skills Needed
             </p>
 
-            <div className="flex flex-wrap gap-2 mt-2">
+            <div className="flex flex-wrap gap-1.5 mt-2">
               {skills.map((skill, index) => (
                 <span
                   key={index}
-                  className="text-sm font-medium bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full"
+                  className="tag !text-sm !px-3 !py-1.5"
                 >
                   {skill}
                 </span>
@@ -192,16 +192,16 @@ function TeamProfile() {
 
         {/* Roles */}
         {roles.length > 0 && (
-          <div className="mt-5">
-            <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
+          <div className="mt-6">
+            <p className="eyebrow">
               Roles Needed
             </p>
 
-            <div className="flex flex-wrap gap-2 mt-2">
+            <div className="flex flex-wrap gap-1.5 mt-2">
               {roles.map((role, index) => (
                 <span
                   key={index}
-                  className="text-sm font-medium bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full"
+                  className="tag !text-sm !px-3 !py-1.5"
                 >
                   {role}
                 </span>
@@ -212,12 +212,12 @@ function TeamProfile() {
 
         {/* Contact */}
         {contact && (
-          <div className="mt-6 pt-5 border-t border-gray-200">
-            <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
+          <div className="mt-7 pt-6 border-t border-zinc-100">
+            <p className="eyebrow">
               Team Contact
             </p>
 
-            <p className="mt-1 text-sm text-gray-700 break-all">
+            <p className="mt-1.5 text-sm font-medium text-zinc-800 break-all">
               {contact}
             </p>
           </div>
@@ -225,45 +225,51 @@ function TeamProfile() {
       </section>
 
       {/* Members */}
-      <section className="mt-6 bg-white border border-gray-300 rounded-xl p-5 sm:p-6">
-        <div>
-          <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">
-            Team Members
-          </p>
-
-          <h2 className="mt-1 text-xl font-bold text-gray-900">
+      <section className="mt-6">
+        <div className="mb-4 flex items-baseline justify-between">
+          <h2 className="text-lg font-semibold text-zinc-900">
             Members
           </h2>
+
+          <span className="text-sm font-medium text-zinc-500">
+            {team.members?.length || 0}
+          </span>
         </div>
 
         {team.members?.length > 0 ? (
-          <div className="mt-5 space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             {team.members.map((member) => (
               <Link
                 key={member.id}
                 to={`/students/${member.id}`}
-                className="flex items-center justify-between gap-3 border border-gray-200 rounded-lg p-3 hover:border-gray-400 transition"
+                className="card flex items-center justify-between gap-3 p-4 transition-shadow hover:shadow-md"
               >
-                <div className="min-w-0">
-                  <p className="font-medium text-gray-900 truncate">
-                    {member.name}
-                  </p>
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-full bg-zinc-100 flex items-center justify-center text-sm font-semibold text-zinc-700 shrink-0">
+                    {member.name.charAt(0).toUpperCase()}
+                  </div>
 
-                  <p className="text-sm text-gray-500">
-                    {member.program}
-                  </p>
+                  <div className="min-w-0">
+                    <p className="font-medium text-zinc-900 truncate">
+                      {member.name}
+                    </p>
+
+                    <p className="text-xs font-medium text-zinc-500">
+                      {member.program}
+                    </p>
+                  </div>
                 </div>
 
-                <span className="text-sm text-gray-500 shrink-0">
+                <span className="text-sm font-medium text-zinc-400 shrink-0">
                   View
                 </span>
               </Link>
             ))}
           </div>
         ) : (
-          <p className="mt-5 text-sm text-gray-500">
+          <div className="card p-6 text-center text-sm text-zinc-500">
             No members found.
-          </p>
+          </div>
         )}
       </section>
     </main>
