@@ -5,8 +5,7 @@ description = "FYP Finder backend"
 requires-python = ">=3.12"
 
 dependencies = [
-    "fastapi",
-    "uvicorn[standard]",
+    "fastapi[standard]",
     "sqlalchemy",
     "psycopg[binary]",
     "python-dotenv",
@@ -14,3 +13,6 @@ dependencies = [
     "passlib[bcrypt]",
     "python-jose[cryptography]"
 ]
+
+[tool.fastapi]
+entrypoint = "app.main:app"
