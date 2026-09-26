@@ -10,7 +10,7 @@ dependencies = [
     "psycopg[binary]",
     "python-dotenv",
     "email-validator",
-    "passlib[bcrypt]",
+    "bcrypt",
     "python-jose[cryptography]"
 ]
 
