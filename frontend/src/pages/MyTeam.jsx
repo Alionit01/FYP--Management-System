@@ -41,7 +41,7 @@ function MyTeam() {
       }
 
       setTeam(data);
-      setMembers(data.members || []);
+      setMembers(data?.members || []);
     } catch (err) {
       setError(err.message);
     } finally {

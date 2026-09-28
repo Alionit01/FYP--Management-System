@@ -92,7 +92,7 @@ function Navbar() {
             ) : (
               <Link
                 to="/login"
-                className="ml-2 bg-zinc-900 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-zinc-700 active:bg-zinc-800 transition-colors"
+                className="ml-2 bg-zinc-900 !text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-zinc-700 active:bg-zinc-800 transition-colors"
               >
                 Login
               </Link>
