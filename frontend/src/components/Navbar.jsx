@@ -186,7 +186,7 @@ function Navbar() {
                 <Link
                   to="/login"
                   onClick={handleLinkClick}
-                  className="mt-3 w-full text-center bg-zinc-900 text-white py-3 rounded-lg text-sm font-medium hover:bg-zinc-700 active:bg-zinc-800 transition-colors"
+                  className="mt-3 w-full text-center bg-zinc-900 !text-white py-3 rounded-lg text-sm font-medium hover:bg-zinc-700 active:bg-zinc-800 transition-colors"
                 >
                   Login
                 </Link>
