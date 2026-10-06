@@ -96,58 +96,60 @@ def create_student(student: StudentCreate):
 
     db = database.SessionLocal()
 
-    existing_student = db.query(models.Student).filter(
-        (models.Student.email == student.email) |
-        (models.Student.university_id == student.university_id)
-    ).first()
+    email = student.email.lower()
 
-    if existing_student:
+    try:
+        existing_student = db.query(models.Student).filter(
+            (models.Student.email == email) |
+            (models.Student.university_id == student.university_id)
+        ).first()
+
+        if existing_student:
+            raise HTTPException(
+                status_code=400,
+                detail="Email or university ID already registered"
+            )
+
+        if student.program not in PROGRAMS:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid program"
+            )
+
+        if student.fyp_status and student.fyp_status not in FYP_STATUSES:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid FYP status"
+            )
+
+        new_student = models.Student(
+            name=student.name,
+            university_id=student.university_id,
+            email=email,
+            password=hash_password(student.password),
+            program=student.program,
+            profile_picture=student.profile_picture,
+            bio=student.bio,
+            github=student.github,
+            linkedin=student.linkedin,
+            whatsapp=student.whatsapp,
+            skills=student.skills,
+            interests=student.interests,
+            fyp_status=student.fyp_status
+        )
+
+        db.add(new_student)
+        db.commit()
+        db.refresh(new_student)
+
+        student_id = new_student.id
+
+        return {
+            "message": "Student created successfully",
+            "student_id": student_id
+        }
+    finally:
         db.close()
-        raise HTTPException(
-            status_code=400,
-            detail="Email or university ID already registered"
-        )
-
-    if student.program not in PROGRAMS:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid program"
-        )
-
-    if student.fyp_status and student.fyp_status not in FYP_STATUSES:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid FYP status"
-        )
-
-    new_student = models.Student(
-        name=student.name,
-        university_id=student.university_id,
-        email=student.email,
-        password=hash_password(student.password),
-        program=student.program,
-        profile_picture=student.profile_picture,
-        bio=student.bio,
-        github=student.github,
-        linkedin=student.linkedin,
-        whatsapp=student.whatsapp,
-        skills=student.skills,
-        interests=student.interests,
-        fyp_status=student.fyp_status
-    )
-
-    db.add(new_student)
-    db.commit()
-    db.refresh(new_student)
-
-    student_id = new_student.id
-
-    db.close()
-
-    return {
-        "message": "Student created successfully",
-        "student_id": student_id
-    }
 
 
 _LOGIN_ATTEMPTS: dict = defaultdict(deque)
@@ -176,33 +178,32 @@ def login(student: StudentLogin, request: Request):
 
     db = database.SessionLocal()
 
-    user = db.query(models.Student).filter(
-        models.Student.email == student.email
-    ).first()
+    try:
+        user = db.query(models.Student).filter(
+            models.Student.email == student.email.lower()
+        ).first()
 
-    if not user:
+        if not user:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid email or password"
+            )
+
+        if not verify_password(student.password, user.password):
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid email or password"
+            )
+
+        token = create_access_token(user.id)
+
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "student_id": user.id
+        }
+    finally:
         db.close()
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid email or password"
-        )
-
-    if not verify_password(student.password, user.password):
-        db.close()
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid email or password"
-        )
-
-    token = create_access_token(user.id)
-
-    db.close()
-
-    return {
-        "access_token": token,
-        "token_type": "bearer",
-        "student_id": user.id
-    }
 
 
 # =========================
@@ -301,67 +302,67 @@ def update_my_profile(
 ):
     db = database.SessionLocal()
 
-    student = db.query(models.Student).filter(
-        models.Student.id == current_student.id
-    ).first()
+    try:
+        student = db.query(models.Student).filter(
+            models.Student.id == current_student.id
+        ).first()
 
-    if not student:
+        if not student:
+            raise HTTPException(
+                status_code=404,
+                detail="Student not found"
+            )
+
+        if student_data.program not in PROGRAMS:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid program"
+            )
+
+        if (
+                student_data.fyp_status
+                and student_data.fyp_status not in FYP_STATUSES
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid FYP status"
+            )
+
+        student.name = student_data.name
+        student.program = student_data.program
+        student.profile_picture = student_data.profile_picture
+        student.bio = student_data.bio
+        student.github = student_data.github
+        student.linkedin = student_data.linkedin
+        student.whatsapp = student_data.whatsapp
+        student.skills = student_data.skills
+        student.interests = student_data.interests
+        student.fyp_status = student_data.fyp_status
+
+        db.commit()
+
+        profile = {
+            "id": student.id,
+            "name": student.name,
+            "university_id": student.university_id,
+            "email": student.email,
+            "program": student.program,
+            "profile_picture": student.profile_picture,
+            "bio": student.bio,
+            "github": student.github,
+            "linkedin": student.linkedin,
+            "whatsapp": student.whatsapp,
+            "skills": student.skills,
+            "interests": student.interests,
+            "fyp_status": student.fyp_status
+        }
+
+        return {
+            "message": "Profile updated successfully",
+            "profile": profile
+        }
+    finally:
         db.close()
-        raise HTTPException(
-            status_code=404,
-            detail="Student not found"
-        )
-
-    if student_data.program not in PROGRAMS:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid program"
-        )
-
-    if (
-            student_data.fyp_status
-            and student_data.fyp_status not in FYP_STATUSES
-    ):
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid FYP status"
-        )
-
-    student.name = student_data.name
-    student.program = student_data.program
-    student.profile_picture = student_data.profile_picture
-    student.bio = student_data.bio
-    student.github = student_data.github
-    student.linkedin = student_data.linkedin
-    student.whatsapp = student_data.whatsapp
-    student.skills = student_data.skills
-    student.interests = student_data.interests
-    student.fyp_status = student_data.fyp_status
-
-    db.commit()
-
-    profile = {
-        "id": student.id,
-        "name": student.name,
-        "university_id": student.university_id,
-        "email": student.email,
-        "program": student.program,
-        "profile_picture": student.profile_picture,
-        "bio": student.bio,
-        "github": student.github,
-        "linkedin": student.linkedin,
-        "whatsapp": student.whatsapp,
-        "skills": student.skills,
-        "interests": student.interests,
-        "fyp_status": student.fyp_status
-    }
-
-    db.close()
-
-    return {
-        "message": "Profile updated successfully",
-        "profile": profile
-    }
 
 @app.get("/my-profile")
 def get_my_profile(
@@ -491,7 +492,7 @@ def update_team(
     try:
         team = db.query(models.Team).filter(
             models.Team.id == team_id
-        ).first()
+        ).with_for_update().first()
 
         if not team:
             raise HTTPException(
@@ -583,7 +584,7 @@ def leave_team(
 
         team = db.query(models.Team).filter(
             models.Team.id == team_id
-        ).first()
+        ).with_for_update().first()
 
         if not team:
             raise HTTPException(
@@ -832,7 +833,7 @@ def add_team_member(
 
     team = db.query(models.Team).filter(
         models.Team.id == team_id
-    ).first()
+    ).with_for_update().first()
 
     if not team:
         db.close()
@@ -940,7 +941,7 @@ def remove_team_member(
 
     team = db.query(models.Team).filter(
         models.Team.id == team_id
-    ).first()
+    ).with_for_update().first()
 
     if not team:
         db.close()

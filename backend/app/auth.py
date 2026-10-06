@@ -3,7 +3,7 @@ import os
 
 import bcrypt
 from dotenv import load_dotenv
-from jose import jwt
+import jwt
 
 
 load_dotenv()

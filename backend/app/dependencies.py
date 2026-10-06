@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt, JWTError
+import jwt
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 import os
@@ -47,7 +47,7 @@ def get_current_student(
                 detail="Invalid authentication token"
             )
 
-    except JWTError:
+    except jwt.PyJWTError:
         raise HTTPException(
             status_code=401,
             detail="Invalid authentication token"
