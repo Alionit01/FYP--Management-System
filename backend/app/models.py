@@ -1,4 +1,5 @@
 from sqlalchemy import (
+    Boolean,
     Column,
     Integer,
     String,
@@ -26,6 +27,10 @@ class Student(Base):
     skills = Column(Text, nullable=True)
     interests = Column(Text, nullable=True)
     fyp_status = Column(String, nullable=True)
+    email_verified = Column(
+        Boolean, nullable=False, default=False
+    )
+    verification_token = Column(String, nullable=True)
 
 class Team(Base):
     __tablename__ = "teams"

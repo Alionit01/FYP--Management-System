@@ -46,6 +46,17 @@ class StudentCreate(BaseModel):
     interests: Optional[str] = Field(default=None, max_length=1000)
     fyp_status: Optional[str] = None
 
+
+    @field_validator("password")
+    @classmethod
+    def _check_password_bytes(cls, v):
+        # bcrypt operates on bytes; 72 chars may exceed 72 bytes
+        if len(v.encode("utf-8")) > 72:
+            raise ValueError(
+                "Password must be at most 72 bytes (UTF-8)"
+            )
+        return v
+
     @field_validator("github", "linkedin", "profile_picture")
     @classmethod
     def _check_urls(cls, v):
@@ -73,6 +84,15 @@ class StudentLogin(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=72)
 
+    @field_validator("password")
+    @classmethod
+    def _check_password_bytes(cls, v):
+        if len(v.encode("utf-8")) > 72:
+            raise ValueError(
+                "Password must be at most 72 bytes (UTF-8)"
+            )
+        return v
+
 
 class StudentUpdate(BaseModel):
     name: str = Field(min_length=2, max_length=100)
@@ -86,6 +106,7 @@ class StudentUpdate(BaseModel):
     skills: Optional[str] = Field(default=None, max_length=1000)
     interests: Optional[str] = Field(default=None, max_length=1000)
     fyp_status: Optional[str] = None
+
 
     @field_validator("github", "linkedin", "profile_picture")
     @classmethod

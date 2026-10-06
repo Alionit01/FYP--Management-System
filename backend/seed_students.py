@@ -222,6 +222,7 @@ try:
 
         student = Student(
             **student_data,
+            email_verified=True,
             password=hash_password("TestPassword123")
         )
 

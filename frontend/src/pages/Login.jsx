@@ -116,6 +116,12 @@ function Login() {
             </div>
           </div>
 
+          {location.state?.message && !error && (
+            <div className="mt-5 border border-green-200 bg-green-50 text-green-700 rounded-lg px-4 py-3 text-sm">
+              {location.state.message}
+            </div>
+          )}
+
           {error && (
             <div className="mt-5 border border-red-200 bg-red-50 text-red-700 rounded-lg px-4 py-3 text-sm">
               {error}

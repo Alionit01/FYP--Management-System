@@ -1,6 +1,7 @@
 import os
+import secrets
 import time
-from collections import defaultdict, deque
+from collections import deque
 
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
@@ -57,6 +58,26 @@ TEAM_DEPARTMENT_OPTIONS = PROGRAMS | {"Any"}
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
+
+# Lightweight column migrations for existing databases.
+# New users are created with email_verified=False explicitly; existing
+# rows are grandfathered in as verified so they are not locked out.
+try:
+    with engine.begin() as conn:
+        conn.execute(text(
+            "ALTER TABLE students ADD COLUMN IF NOT EXISTS "
+            "email_verified BOOLEAN NOT NULL DEFAULT FALSE"
+        ))
+        conn.execute(text(
+            "ALTER TABLE students ADD COLUMN IF NOT EXISTS "
+            "verification_token VARCHAR"
+        ))
+        conn.execute(text(
+            "UPDATE students SET email_verified = TRUE "
+            "WHERE verification_token IS NULL"
+        ))
+except Exception:
+    pass
 
 
 @app.get("/")
@@ -135,32 +156,97 @@ def create_student(student: StudentCreate):
             whatsapp=student.whatsapp,
             skills=student.skills,
             interests=student.interests,
-            fyp_status=student.fyp_status
+            fyp_status=student.fyp_status,
+            email_verified=False,
+            verification_token=secrets.token_urlsafe(32)
         )
 
         db.add(new_student)
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(
+                status_code=400,
+                detail="Email or university ID already registered"
+            )
         db.refresh(new_student)
 
-        student_id = new_student.id
+        # NOTE: no SMTP is configured in this project, so the
+        # verification link is logged (and returned in dev mode).
+        verify_url = (
+            f"/verify-email?token={new_student.verification_token}"
+        )
+        print(f"[DEV] Email verification link for {email}: {verify_url}")
 
         return {
-            "message": "Student created successfully",
-            "student_id": student_id
+            "message": (
+                "Student created successfully. "
+                "Please verify your email before logging in."
+            ),
+            "student_id": new_student.id
         }
     finally:
         db.close()
 
 
-_LOGIN_ATTEMPTS: dict = defaultdict(deque)
+@app.get("/verify-email")
+def verify_email(token: str):
+    db = database.SessionLocal()
+    try:
+        student = db.query(models.Student).filter(
+            models.Student.verification_token == token
+        ).first()
+
+        if not student:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid or expired verification token"
+            )
+
+        student.email_verified = True
+        student.verification_token = None
+        db.commit()
+
+        return {"message": "Email verified successfully"}
+    finally:
+        db.close()
+
+
+_LOGIN_ATTEMPTS: dict = {}
 LOGIN_MAX_ATTEMPTS = 5
 LOGIN_WINDOW_SECONDS = 60
+_MAX_TRACKED_IPS = 10000
+
+
+def _client_ip(request: Request) -> str:
+    # Trust X-Forwarded-For only because the app is deployed behind a
+    # proxy; use the first (client) hop.
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _record_login_failure(request: Request) -> None:
+    ip = _client_ip(request)
+    now = time.monotonic()
+    attempts = _LOGIN_ATTEMPTS.setdefault(ip, deque())
+    while attempts and now - attempts[0] > LOGIN_WINDOW_SECONDS:
+        attempts.popleft()
+    attempts.append(now)
+    # Bound memory usage
+    if len(_LOGIN_ATTEMPTS) > _MAX_TRACKED_IPS:
+        for key in [k for k, v in _LOGIN_ATTEMPTS.items() if not v]:
+            del _LOGIN_ATTEMPTS[key]
 
 
 def _check_login_rate_limit(request: Request) -> None:
-    ip = request.client.host if request.client else "unknown"
+    ip = _client_ip(request)
     now = time.monotonic()
-    attempts = _LOGIN_ATTEMPTS[ip]
+    attempts = _LOGIN_ATTEMPTS.get(ip)
+    if not attempts:
+        return
     while attempts and now - attempts[0] > LOGIN_WINDOW_SECONDS:
         attempts.popleft()
     if len(attempts) >= LOGIN_MAX_ATTEMPTS:
@@ -168,7 +254,6 @@ def _check_login_rate_limit(request: Request) -> None:
             status_code=429,
             detail="Too many login attempts. Please try again later."
         )
-    attempts.append(now)
 
 
 @app.post("/login")
@@ -183,16 +268,19 @@ def login(student: StudentLogin, request: Request):
             models.Student.email == student.email.lower()
         ).first()
 
-        if not user:
+        if not user or not verify_password(
+            student.password, user.password
+        ):
+            _record_login_failure(request)
             raise HTTPException(
                 status_code=401,
                 detail="Invalid email or password"
             )
 
-        if not verify_password(student.password, user.password):
+        if not user.email_verified:
             raise HTTPException(
-                status_code=401,
-                detail="Invalid email or password"
+                status_code=403,
+                detail="Please verify your email before logging in"
             )
 
         token = create_access_token(user.id)

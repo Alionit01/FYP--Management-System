@@ -58,6 +58,10 @@ function Register() {
       navigate("/login", {
         state: {
           registered: true,
+          message:
+            typeof data.message === "string"
+              ? data.message
+              : "Account created successfully.",
         },
       });
     } catch {
