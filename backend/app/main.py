@@ -1,6 +1,9 @@
 import os
+import time
+from collections import defaultdict, deque
 
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from fastapi.middleware.cors import CORSMiddleware
 
 from sqlalchemy.orm import Session
@@ -19,7 +22,7 @@ from .schemas import (
     MAX_TEAM_MEMBERS
 )
 from .auth import hash_password, verify_password, create_access_token
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
 from .dependencies import get_current_student
 
 app = FastAPI()
@@ -147,8 +150,29 @@ def create_student(student: StudentCreate):
     }
 
 
+_LOGIN_ATTEMPTS: dict = defaultdict(deque)
+LOGIN_MAX_ATTEMPTS = 5
+LOGIN_WINDOW_SECONDS = 60
+
+
+def _check_login_rate_limit(request: Request) -> None:
+    ip = request.client.host if request.client else "unknown"
+    now = time.monotonic()
+    attempts = _LOGIN_ATTEMPTS[ip]
+    while attempts and now - attempts[0] > LOGIN_WINDOW_SECONDS:
+        attempts.popleft()
+    if len(attempts) >= LOGIN_MAX_ATTEMPTS:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many login attempts. Please try again later."
+        )
+    attempts.append(now)
+
+
 @app.post("/login")
-def login(student: StudentLogin):
+def login(student: StudentLogin, request: Request):
+
+    _check_login_rate_limit(request)
 
     db = database.SessionLocal()
 
@@ -245,6 +269,31 @@ def get_student(student_id: int):
         "fyp_status": student.fyp_status
     }
 
+@app.get("/students/{student_id}/contact")
+def get_student_contact(
+    student_id: int,
+    current_student=Depends(get_current_student)
+):
+
+    db = database.SessionLocal()
+
+    student = db.query(models.Student).filter(
+        models.Student.id == student_id
+    ).first()
+
+    db.close()
+
+    if not student:
+        raise HTTPException(
+            status_code=404,
+            detail="Student not found"
+        )
+
+    return {
+        "email": student.email,
+        "whatsapp": student.whatsapp
+    }
+
 @app.put("/my-profile")
 def update_my_profile(
     student_data: StudentUpdate,
@@ -290,10 +339,28 @@ def update_my_profile(
     student.fyp_status = student_data.fyp_status
 
     db.commit()
+
+    profile = {
+        "id": student.id,
+        "name": student.name,
+        "university_id": student.university_id,
+        "email": student.email,
+        "program": student.program,
+        "profile_picture": student.profile_picture,
+        "bio": student.bio,
+        "github": student.github,
+        "linkedin": student.linkedin,
+        "whatsapp": student.whatsapp,
+        "skills": student.skills,
+        "interests": student.interests,
+        "fyp_status": student.fyp_status
+    }
+
     db.close()
 
     return {
-        "message": "Profile updated successfully"
+        "message": "Profile updated successfully",
+        "profile": profile
     }
 
 @app.get("/my-profile")
@@ -617,6 +684,7 @@ def get_team(team_id: int):
         "spots_available": team.spots_available,
         "skills_needed": team.skills_needed,
         "roles_needed": team.roles_needed,
+        "contact": team.contact,
         "created_by": team.created_by,
         "members": member_list
     }
@@ -667,92 +735,6 @@ def get_team_members(team_id: int):
     db.close()
 
     return result
-
-@app.post("/teams/{team_id}/members/{student_id}")
-def add_team_member(
-    team_id: int,
-    student_id: int,
-    current_student=Depends(get_current_student)
-):
-
-    db = database.SessionLocal()
-
-    team = db.query(models.Team).filter(
-        models.Team.id == team_id
-    ).first()
-
-    if team.created_by != current_student.id:
-        db.close()
-        raise HTTPException(
-            status_code=403,
-            detail="Only the team owner can add members"
-        )
-
-    if not team:
-        db.close()
-        raise HTTPException(
-            status_code=404,
-            detail="Team not found"
-        )
-
-    student = db.query(models.Student).filter(
-        models.Student.id == student_id
-    ).first()
-
-    if not student:
-        db.close()
-        raise HTTPException(
-            status_code=404,
-            detail="Student not found"
-        )
-
-    existing_member = db.query(models.TeamMember).filter(
-        models.TeamMember.team_id == team_id,
-        models.TeamMember.student_id == student_id
-    ).first()
-
-    if existing_member:
-        db.close()
-        raise HTTPException(
-            status_code=400,
-            detail="Student is already a member of this team"
-        )
-
-    current_members = db.query(models.TeamMember).filter(
-        models.TeamMember.team_id == team_id
-    ).count()
-    if current_members >= MAX_TEAM_MEMBERS:
-        db.close()
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"This team already has the maximum of "
-                f"{MAX_TEAM_MEMBERS} members"
-            )
-        )
-    if team.spots_available <= 0:
-        db.close()
-        raise HTTPException(
-            status_code=400,
-            detail="Team has no available spots"
-        )
-
-    member = models.TeamMember(
-        team_id=team_id,
-        student_id=student_id
-    )
-
-    db.add(member)
-
-    team.spots_available -= 1
-
-    db.commit()
-
-    db.close()
-
-    return {
-        "message": "Student added to team successfully"
-    }
 
 @app.get("/my-team")
 def get_my_team(
@@ -930,7 +912,15 @@ def add_team_member(
 
     team.spots_available -= 1
 
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        db.close()
+        raise HTTPException(
+            status_code=400,
+            detail="Student could not be added to the team"
+        )
     db.refresh(team)
 
     db.close()

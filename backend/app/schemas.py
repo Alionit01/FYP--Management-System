@@ -22,7 +22,7 @@ class StudentCreate(BaseModel):
     name: str = Field(min_length=2, max_length=100)
     university_id: str = Field(min_length=1, max_length=50)
     email: EmailStr
-    password: str = Field(min_length=6, max_length=100)
+    password: str = Field(min_length=6, max_length=72)
     program: str
 
     profile_picture: Optional[str] = None
@@ -54,7 +54,7 @@ class TeamCreate(BaseModel):
 
 class StudentLogin(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=1, max_length=100)
+    password: str = Field(min_length=1, max_length=72)
 
 
 class StudentUpdate(BaseModel):

@@ -54,7 +54,7 @@ function CreateTeam() {
         return;
       }
 
-      navigate(`/teams/${data.id}`);
+      navigate(`/teams/${data.team_id}`);
     } catch {
       setError("Could not connect to the server.");
     } finally {

@@ -88,19 +88,21 @@ function MyProfile() {
         return;
       }
 
-      setProfile(data);
+      const updated = data.profile;
+
+      setProfile(updated);
 
       setForm({
-        name: data.name || "",
-        program: data.program || "",
-        profile_picture: data.profile_picture || "",
-        bio: data.bio || "",
-        github: data.github || "",
-        linkedin: data.linkedin || "",
-        whatsapp: data.whatsapp || "",
-        skills: data.skills || "",
-        interests: data.interests || "",
-        fyp_status: data.fyp_status || "",
+        name: updated.name || "",
+        program: updated.program || "",
+        profile_picture: updated.profile_picture || "",
+        bio: updated.bio || "",
+        github: updated.github || "",
+        linkedin: updated.linkedin || "",
+        whatsapp: updated.whatsapp || "",
+        skills: updated.skills || "",
+        interests: updated.interests || "",
+        fyp_status: updated.fyp_status || "",
       });
 
       setMessage("Profile updated successfully.");
