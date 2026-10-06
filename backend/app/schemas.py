@@ -1,5 +1,17 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional
+
+
+def _validate_url(value: Optional[str]) -> Optional[str]:
+    if value is None or value == "":
+        return value
+    lowered = value.strip().lower()
+    if not (lowered.startswith("https://") or lowered.startswith("http://")):
+        raise ValueError(
+            "URL must start with http:// or https://"
+        )
+    return value
+
 
 
 
@@ -33,6 +45,11 @@ class StudentCreate(BaseModel):
     skills: Optional[str] = Field(default=None, max_length=1000)
     interests: Optional[str] = Field(default=None, max_length=1000)
     fyp_status: Optional[str] = None
+
+    @field_validator("github", "linkedin", "profile_picture")
+    @classmethod
+    def _check_urls(cls, v):
+        return _validate_url(v)
 
 
 class TeamCreate(BaseModel):
@@ -69,6 +86,11 @@ class StudentUpdate(BaseModel):
     skills: Optional[str] = Field(default=None, max_length=1000)
     interests: Optional[str] = Field(default=None, max_length=1000)
     fyp_status: Optional[str] = None
+
+    @field_validator("github", "linkedin", "profile_picture")
+    @classmethod
+    def _check_urls(cls, v):
+        return _validate_url(v)
 
 class TeamUpdate(BaseModel):
     name: str = Field(min_length=2, max_length=100)

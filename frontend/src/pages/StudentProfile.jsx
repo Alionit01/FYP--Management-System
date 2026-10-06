@@ -3,6 +3,12 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import API_URL from "../api";
 
+function isSafeUrl(url) {
+  if (!url) return false;
+  const lowered = url.trim().toLowerCase();
+  return lowered.startsWith("https://") || lowered.startsWith("http://");
+}
+
 function StudentProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -248,9 +254,9 @@ function StudentProfile() {
         )}
 
         {/* Links */}
-        {(student.github || student.linkedin) && (
+        {(isSafeUrl(student.github) || isSafeUrl(student.linkedin)) && (
           <div className="mt-6 flex flex-wrap gap-3">
-            {student.github && (
+            {isSafeUrl(student.github) && (
               <a
                 href={student.github}
                 target="_blank"
@@ -261,7 +267,7 @@ function StudentProfile() {
               </a>
             )}
 
-            {student.linkedin && (
+            {isSafeUrl(student.linkedin) && (
               <a
                 href={student.linkedin}
                 target="_blank"
