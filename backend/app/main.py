@@ -210,6 +210,18 @@ def login(student: StudentLogin, request: Request):
 # STUDENTS
 # =========================
 
+def _clamp_spots_available(db, team) -> None:
+    """Keep spots_available consistent with the actual member count."""
+    db.flush()  # ensure pending add/delete of memberships is counted
+    member_count = db.query(models.TeamMember).filter(
+        models.TeamMember.team_id == team.id
+    ).count()
+    team.spots_available = max(
+        0,
+        min(team.spots_available, MAX_TEAM_MEMBERS - member_count)
+    )
+
+
 @app.get("/students")
 def get_students():
 
@@ -535,6 +547,7 @@ def update_team(
                 )
             )
         team.spots_available = team_data.spots_available
+        _clamp_spots_available(db, team)
         team.skills_needed = team_data.skills_needed
         team.roles_needed = team_data.roles_needed
         team.contact = team_data.contact
@@ -560,6 +573,50 @@ def update_team(
 
     finally:
         db.close()
+
+@app.delete("/teams/{team_id}")
+def delete_team(
+    team_id: int,
+    current_student: models.Student = Depends(
+        get_current_student
+    )
+):
+    db: Session = SessionLocal()
+
+    try:
+        team = db.query(models.Team).filter(
+            models.Team.id == team_id
+        ).with_for_update().first()
+
+        if not team:
+            raise HTTPException(
+                status_code=404,
+                detail="Team not found"
+            )
+
+        # Only the team owner can delete the team
+        if team.created_by != current_student.id:
+            raise HTTPException(
+                status_code=403,
+                detail="Only the team owner can delete the team"
+            )
+
+        # Remove memberships explicitly (FK cascade also covers this,
+        # but do it explicitly so we don't rely on DB-level cascade)
+        db.query(models.TeamMember).filter(
+            models.TeamMember.team_id == team_id
+        ).delete()
+
+        db.delete(team)
+        db.commit()
+
+        return {
+            "message": "Team deleted successfully"
+        }
+
+    finally:
+        db.close()
+
 
 @app.delete("/teams/{team_id}/members/me")
 def leave_team(
@@ -593,13 +650,34 @@ def leave_team(
             )
 
         if team.created_by == current_student.id:
-            raise HTTPException(
-                status_code=400,
-                detail="Team owner cannot leave the team"
-            )
+            # Owner leaving: hand leadership to the next member,
+            # or dissolve the team if nobody else remains.
+            db.delete(membership)
+            db.flush()
+
+            next_membership = db.query(models.TeamMember).filter(
+                models.TeamMember.team_id == team_id
+            ).order_by(models.TeamMember.id).first()
+
+            if next_membership is None:
+                db.delete(team)
+                db.commit()
+                return {
+                    "message": "You left the team and it was removed"
+                }
+
+            team.created_by = next_membership.student_id
+            team.spots_available += 1
+            _clamp_spots_available(db, team)
+            db.commit()
+
+            return {
+                "message": "You left the team; leadership was transferred"
+            }
 
         db.delete(membership)
         team.spots_available += 1
+        _clamp_spots_available(db, team)
 
         db.commit()
 
@@ -685,7 +763,6 @@ def get_team(team_id: int):
         "spots_available": team.spots_available,
         "skills_needed": team.skills_needed,
         "roles_needed": team.roles_needed,
-        "contact": team.contact,
         "created_by": team.created_by,
         "members": member_list
     }
@@ -912,6 +989,7 @@ def add_team_member(
     db.add(membership)
 
     team.spots_available -= 1
+    _clamp_spots_available(db, team)
 
     try:
         db.commit()
@@ -979,6 +1057,7 @@ def remove_team_member(
 
     # One spot becomes available again
     team.spots_available += 1
+    _clamp_spots_available(db, team)
 
     db.commit()
     db.close()

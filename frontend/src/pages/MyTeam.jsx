@@ -55,7 +55,11 @@ function MyTeam() {
 
   const handleLeaveTeam = async () => {
     const confirmed = window.confirm(
-      "Are you sure you want to leave this team?"
+      isOwner
+        ? members.length > 1
+          ? "You are the team owner. Leaving will transfer leadership to another member. Continue?"
+          : "You are the only member. Leaving will delete this team. Continue?"
+        : "Are you sure you want to leave this team?"
     );
 
     if (!confirmed) return;
@@ -78,6 +82,36 @@ function MyTeam() {
 
       if (!response.ok) {
         throw new Error(data.detail || "Unable to leave team.");
+      }
+
+      navigate("/teams");
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleDeleteTeam = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to permanently delete this team? This cannot be undone."
+    );
+
+    if (!confirmed) return;
+
+    setMessage("");
+    setError("");
+
+    try {
+      const response = await fetch(`${API_URL}/teams/${team.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Unable to delete team.");
       }
 
       navigate("/teams");
@@ -474,17 +508,24 @@ function MyTeam() {
         )}
       </div>
 
-      {/* Leave Team */}
-      {!isOwner && (
-        <div className="mt-6">
+      {/* Leave / Delete Team */}
+      <div className="mt-6 flex flex-col sm:flex-row gap-3">
+        <button
+          onClick={handleLeaveTeam}
+          className="danger-button w-full sm:w-auto"
+        >
+          Leave Team
+        </button>
+
+        {isOwner && (
           <button
-            onClick={handleLeaveTeam}
+            onClick={handleDeleteTeam}
             className="danger-button w-full sm:w-auto"
           >
-            Leave Team
+            Delete Team
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
     </div>
   );
