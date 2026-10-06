@@ -257,6 +257,10 @@ function TeamProfile() {
                     <p className="text-xs font-medium text-zinc-500">
                       {member.program}
                     </p>
+
+                    {String(member.id) === String(team.created_by) && (
+                      <span className="badge mt-1.5">Team Owner</span>
+                    )}
                   </div>
                 </div>
 

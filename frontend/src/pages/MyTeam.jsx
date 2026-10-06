@@ -42,6 +42,22 @@ function MyTeam() {
 
       setTeam(data);
       setMembers(data?.members || []);
+
+      // One-time notice when leadership of your team changed hands
+      if (data) {
+        const ownerKey = `last_team_owner_${data.id}`;
+        const previousOwner = localStorage.getItem(ownerKey);
+        if (
+          previousOwner &&
+          String(previousOwner) !== String(data.created_by) &&
+          String(data.created_by) === String(studentId)
+        ) {
+          setMessage(
+            "You are now the Team Owner after the previous owner left."
+          );
+        }
+        localStorage.setItem(ownerKey, String(data.created_by));
+      }
     } catch (err) {
       setError(err.message);
     } finally {
