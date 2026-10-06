@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 
 import bcrypt
@@ -30,7 +30,7 @@ def verify_password(password, hashed_password):
 
 
 def create_access_token(user_id):
-    expire = datetime.utcnow() + timedelta(hours=24)
+    expire = datetime.now(timezone.utc) + timedelta(hours=24)
 
     payload = {
         "sub": str(user_id),

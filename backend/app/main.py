@@ -85,11 +85,16 @@ def root():
     return {"message": "FYP Finder API is running!"}
 
 
-@app.get("/db-test")
-def db_test():
-    with engine.connect() as connection:
-        result = connection.execute(text("SELECT 1"))
-        return {"database": result.scalar() == 1}
+@app.middleware("http")
+async def security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    response.headers.setdefault(
+        "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+    )
+    return response
 
 
 # =========================
@@ -311,11 +316,14 @@ def _clamp_spots_available(db, team) -> None:
 
 
 @app.get("/students")
-def get_students():
+def get_students(skip: int = 0, limit: int = 50):
+
+    limit = min(max(limit, 1), 100)
+    skip = max(skip, 0)
 
     db = database.SessionLocal()
 
-    students = db.query(models.Student).all()
+    students = db.query(models.Student).offset(skip).limit(limit).all()
 
     result = []
 
@@ -777,11 +785,14 @@ def leave_team(
         db.close()
 
 @app.get("/teams")
-def get_teams():
+def get_teams(skip: int = 0, limit: int = 50):
+
+    limit = min(max(limit, 1), 100)
+    skip = max(skip, 0)
 
     db = database.SessionLocal()
 
-    teams = db.query(models.Team).all()
+    teams = db.query(models.Team).offset(skip).limit(limit).all()
 
     result = []
 

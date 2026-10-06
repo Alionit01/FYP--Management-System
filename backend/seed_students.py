@@ -1,3 +1,5 @@
+# WARNING: Development seed script only. Creates accounts with a shared,
+# well-known password ("TestPassword123"). NEVER run against production.
 from app.database import SessionLocal
 from app.models import Student
 from app.auth import hash_password
