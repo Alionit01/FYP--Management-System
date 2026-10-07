@@ -2,24 +2,95 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import API_URL from "../api";
 
+const PAGE_SIZE = 50;
+
 function Students() {
   const [students, setStudents] = useState([]);
   const [search, setSearch] = useState("");
   const [program, setProgram] = useState("All");
   const [status, setStatus] = useState("All");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
 
   useEffect(() => {
-    fetch(`${API_URL}/students`)
-      .then((response) => response.json())
-      .then((data) => {
-        setStudents(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        setLoading(false);
-      });
-  }, []);
+    let cancelled = false;
+
+    const fetchFirstPage = async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const response = await fetch(
+          `${API_URL}/students?skip=0&limit=${PAGE_SIZE}`
+        );
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            typeof data?.detail === "string"
+              ? data.detail
+              : "Could not load students."
+          );
+        }
+
+        if (!cancelled) {
+          const list = Array.isArray(data) ? data : [];
+          setStudents(list);
+          setHasMore(list.length === PAGE_SIZE);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setStudents([]);
+          setError(
+            err instanceof TypeError
+              ? "Could not connect to the server."
+              : err.message
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchFirstPage();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [retryCount]);
+
+  const loadMoreStudents = async () => {
+    setError("");
+
+    try {
+      const response = await fetch(
+        `${API_URL}/students?skip=${students.length}&limit=${PAGE_SIZE}`
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          typeof data?.detail === "string"
+            ? data.detail
+            : "Could not load more students."
+        );
+      }
+
+      const list = Array.isArray(data) ? data : [];
+      setStudents((current) => [...current, ...list]);
+      setHasMore(list.length === PAGE_SIZE);
+    } catch (err) {
+      setError(
+        err instanceof TypeError
+          ? "Could not connect to the server."
+          : err.message
+      );
+    }
+  };
 
   const filteredStudents = students.filter((student) => {
     const searchText = `
@@ -67,11 +138,15 @@ function Students() {
         <div className="grid gap-4 md:grid-cols-3">
 
           <div className="md:col-span-1">
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
+            <label
+              htmlFor="search"
+              className="block text-sm font-medium text-zinc-700 mb-2"
+            >
               Search
             </label>
 
             <input
+              id="search"
               type="text"
               placeholder="Name, skills, interests..."
               value={search}
@@ -81,11 +156,15 @@ function Students() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
+            <label
+              htmlFor="program"
+              className="block text-sm font-medium text-zinc-700 mb-2"
+            >
               Program
             </label>
 
             <select
+              id="program"
               value={program}
               onChange={(e) => setProgram(e.target.value)}
               className="input-field"
@@ -100,11 +179,15 @@ function Students() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
+            <label
+              htmlFor="status"
+              className="block text-sm font-medium text-zinc-700 mb-2"
+            >
               FYP Status
             </label>
 
             <select
+              id="status"
               value={status}
               onChange={(e) => setStatus(e.target.value)}
               className="input-field"
@@ -123,14 +206,16 @@ function Students() {
       </section>
 
       {/* Results header */}
-      <div className="flex items-baseline justify-between mb-4">
-        <p className="text-sm font-medium text-zinc-500">
-          {filteredStudents.length}{" "}
-          {filteredStudents.length === 1
-            ? "student"
-            : "students"}
-        </p>
-      </div>
+      {!loading && !error && (
+        <div className="flex items-baseline justify-between mb-4">
+          <p className="text-sm font-medium text-zinc-600">
+            {filteredStudents.length}{" "}
+            {filteredStudents.length === 1
+              ? "student"
+              : "students"}
+          </p>
+        </div>
+      )}
 
       {/* Loading */}
       {loading && (
@@ -139,8 +224,27 @@ function Students() {
         </div>
       )}
 
+      {/* Error */}
+      {!loading && error && (
+        <div role="alert" className="border border-red-200 bg-red-50 text-red-700 rounded-2xl p-6 text-center">
+          <h2 className="font-semibold text-lg">
+            Could not load students
+          </h2>
+
+          <p className="mt-2 text-sm">{error}</p>
+
+          <button
+            type="button"
+            onClick={() => setRetryCount((c) => c + 1)}
+            className="secondary-button mt-4"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Empty */}
-      {!loading && filteredStudents.length === 0 && (
+      {!loading && !error && filteredStudents.length === 0 && (
         <div className="border border-dashed border-zinc-300 rounded-2xl p-10 text-center">
           <h2 className="font-semibold text-lg text-zinc-900">
             No students found
@@ -153,7 +257,7 @@ function Students() {
       )}
 
       {/* Students */}
-      {!loading && filteredStudents.length > 0 && (
+      {!loading && !error && filteredStudents.length > 0 && (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
 
           {filteredStudents.map((student) => (
@@ -181,7 +285,12 @@ function Students() {
 
                 <div className="min-w-0">
                   <h2 className="font-semibold text-base text-zinc-900 truncate">
-                    {student.name}
+                    <Link
+                      to={`/students/${student.id}`}
+                      className="hover:underline"
+                    >
+                      {student.name}
+                    </Link>
                   </h2>
 
                   <p className="text-xs font-medium text-zinc-500 mt-0.5">
@@ -241,6 +350,19 @@ function Students() {
             </article>
           ))}
 
+        </div>
+      )}
+
+      {/* Load more */}
+      {!loading && !error && hasMore && (
+        <div className="mt-8 flex justify-center">
+          <button
+            type="button"
+            onClick={loadMoreStudents}
+            className="secondary-button"
+          >
+            Load more students
+          </button>
         </div>
       )}
 

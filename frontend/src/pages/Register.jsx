@@ -9,11 +9,8 @@ function Register() {
     name: "",
     university_id: "",
     email: "",
-    password: "",
     program: "BSCS",
   });
-
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -28,11 +25,6 @@ function Register() {
     e.preventDefault();
 
     setError("");
-
-    if (form.password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
 
     setLoading(true);
 
@@ -84,7 +76,7 @@ function Register() {
           </h1>
 
           <p className="mt-3 text-zinc-600">
-            Use your university email to join FYP Finder.
+            Use your university email to join FYP Finder. You will set your password after confirming the email link.
           </p>
         </div>
 
@@ -94,11 +86,15 @@ function Register() {
         >
           <div className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-2">
+              <label
+                htmlFor="name"
+                className="block text-sm font-medium text-zinc-700 mb-2"
+              >
                 Full Name *
               </label>
 
               <input
+                id="name"
                 type="text"
                 name="name"
                 value={form.name}
@@ -112,11 +108,15 @@ function Register() {
 
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-2">
+                <label
+                  htmlFor="university_id"
+                  className="block text-sm font-medium text-zinc-700 mb-2"
+                >
                   University ID *
                 </label>
 
                 <input
+                  id="university_id"
                   type="text"
                   name="university_id"
                   value={form.university_id}
@@ -128,11 +128,15 @@ function Register() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-2">
+                <label
+                  htmlFor="program"
+                  className="block text-sm font-medium text-zinc-700 mb-2"
+                >
                   Program *
                 </label>
 
                 <select
+                  id="program"
                   name="program"
                   value={form.program}
                   onChange={handleChange}
@@ -149,11 +153,15 @@ function Register() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-2">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-zinc-700 mb-2"
+              >
                 University Email *
               </label>
 
               <input
+                id="email"
                 type="email"
                 name="email"
                 value={form.email}
@@ -164,48 +172,17 @@ function Register() {
                 className="input-field"
               />
 
-              <p className="text-xs text-zinc-400 mt-2">
-                Only @iqra.edu.pk email addresses can register.
+              <p className="text-xs text-zinc-500 mt-2">
+                Only @iqra.edu.pk email addresses can register. Your
+                University ID must match the part of your email before
+                the @.
               </p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-2">
-                Password *
-              </label>
-
-              <input
-                type="password"
-                name="password"
-                value={form.password}
-                onChange={handleChange}
-                required
-                minLength="6"
-                autoComplete="new-password"
-                placeholder="At least 6 characters"
-                className="input-field"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-2">
-                Confirm Password *
-              </label>
-
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                autoComplete="new-password"
-                placeholder="Enter your password again"
-                className="input-field"
-              />
-            </div>
           </div>
 
           {error && (
-            <div className="mt-5 border border-red-200 bg-red-50 text-red-700 rounded-lg px-4 py-3 text-sm">
+            <div role="alert" className="mt-5 border border-red-200 bg-red-50 text-red-700 rounded-lg px-4 py-3 text-sm">
               {error}
             </div>
           )}

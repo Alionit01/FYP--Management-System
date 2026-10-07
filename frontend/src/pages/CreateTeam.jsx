@@ -67,7 +67,7 @@ function CreateTeam() {
       <div className="mb-8">
         <button
           onClick={() => navigate("/teams")}
-          className="text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors"
+          className="text-sm font-medium text-zinc-600 hover:text-zinc-900 transition-colors"
         >
           ← Back to Teams
         </button>
@@ -92,11 +92,15 @@ function CreateTeam() {
       >
         <div className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
+            <label
+              htmlFor="name"
+              className="block text-sm font-medium text-zinc-700 mb-2"
+            >
               Team Name *
             </label>
 
             <input
+              id="name"
               type="text"
               name="name"
               value={form.name}
@@ -108,11 +112,15 @@ function CreateTeam() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
+            <label
+              htmlFor="project_title"
+              className="block text-sm font-medium text-zinc-700 mb-2"
+            >
               Project Title
             </label>
 
             <input
+              id="project_title"
               type="text"
               name="project_title"
               value={form.project_title}
@@ -123,11 +131,15 @@ function CreateTeam() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
+            <label
+              htmlFor="description"
+              className="block text-sm font-medium text-zinc-700 mb-2"
+            >
               About the Project
             </label>
 
             <textarea
+              id="description"
               name="description"
               value={form.description}
               onChange={handleChange}
@@ -139,11 +151,15 @@ function CreateTeam() {
 
           <div className="grid gap-6 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-2">
+              <label
+                htmlFor="department_preference"
+                className="block text-sm font-medium text-zinc-700 mb-2"
+              >
                 Department Preference *
               </label>
 
               <select
+                id="department_preference"
                 name="department_preference"
                 value={form.department_preference}
                 onChange={handleChange}
@@ -160,11 +176,15 @@ function CreateTeam() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-2">
+              <label
+                htmlFor="spots_available"
+                className="block text-sm font-medium text-zinc-700 mb-2"
+              >
                 Available Spots *
               </label>
 
               <input
+                id="spots_available"
                 type="number"
                 name="spots_available"
                 value={form.spots_available}
@@ -174,18 +194,22 @@ function CreateTeam() {
                 className="input-field"
               />
 
-              <p className="text-xs text-zinc-400 mt-2">
+              <p className="text-xs text-zinc-500 mt-2">
                 Number of additional members you need.
               </p>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
+            <label
+              htmlFor="skills_needed"
+              className="block text-sm font-medium text-zinc-700 mb-2"
+            >
               Skills Needed
             </label>
 
             <input
+              id="skills_needed"
               type="text"
               name="skills_needed"
               value={form.skills_needed}
@@ -196,11 +220,15 @@ function CreateTeam() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
+            <label
+              htmlFor="roles_needed"
+              className="block text-sm font-medium text-zinc-700 mb-2"
+            >
               Roles Needed
             </label>
 
             <input
+              id="roles_needed"
               type="text"
               name="roles_needed"
               value={form.roles_needed}
@@ -211,11 +239,15 @@ function CreateTeam() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
+            <label
+              htmlFor="contact"
+              className="block text-sm font-medium text-zinc-700 mb-2"
+            >
               Contact
             </label>
 
             <input
+              id="contact"
               type="text"
               name="contact"
               value={form.contact}
@@ -224,14 +256,14 @@ function CreateTeam() {
               className="input-field"
             />
 
-            <p className="text-xs text-zinc-400 mt-2">
+            <p className="text-xs text-zinc-500 mt-2">
               This will only be shown to logged-in students.
             </p>
           </div>
         </div>
 
         {error && (
-          <div className="mt-6 border border-red-200 bg-red-50 text-red-700 rounded-lg px-4 py-3 text-sm">
+          <div role="alert" className="mt-6 border border-red-200 bg-red-50 text-red-700 rounded-lg px-4 py-3 text-sm">
             {error}
           </div>
         )}

@@ -82,11 +82,15 @@ function Login() {
         >
           <div className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-2">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-zinc-700 mb-2"
+              >
                 University Email
               </label>
 
               <input
+                id="email"
                 type="email"
                 name="email"
                 value={form.email}
@@ -99,11 +103,15 @@ function Login() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-2">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-zinc-700 mb-2"
+              >
                 Password
               </label>
 
               <input
+                id="password"
                 type="password"
                 name="password"
                 value={form.password}
@@ -117,13 +125,13 @@ function Login() {
           </div>
 
           {location.state?.message && !error && (
-            <div className="mt-5 border border-green-200 bg-green-50 text-green-700 rounded-lg px-4 py-3 text-sm">
+            <div role="status" className="mt-5 border border-green-200 bg-green-50 text-green-700 rounded-lg px-4 py-3 text-sm">
               {location.state.message}
             </div>
           )}
 
           {error && (
-            <div className="mt-5 border border-red-200 bg-red-50 text-red-700 rounded-lg px-4 py-3 text-sm">
+            <div role="alert" className="mt-5 border border-red-200 bg-red-50 text-red-700 rounded-lg px-4 py-3 text-sm">
               {error}
             </div>
           )}

@@ -70,7 +70,12 @@ function StudentProfile() {
 
   const showContact = async () => {
     if (!token) {
-      navigate("/login");
+      navigate("/login", {
+        state: {
+          from: { pathname: `/students/${id}` },
+          message: "Sign in to view this student's contact information.",
+        },
+      });
       return;
     }
 
@@ -155,7 +160,7 @@ function StudentProfile() {
       <button
         type="button"
         onClick={() => navigate("/students")}
-        className="inline-flex items-center gap-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 cursor-pointer transition-colors"
+        className="inline-flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 cursor-pointer transition-colors"
       >
         <ArrowLeft size={18} />
         <span>Back to Students</span>
@@ -194,7 +199,7 @@ function StudentProfile() {
               {student.program}
             </p>
 
-            <p className="mt-0.5 text-xs text-zinc-400">
+            <p className="mt-0.5 text-xs text-zinc-500">
               {student.university_id}
             </p>
           </div>
@@ -327,7 +332,7 @@ function StudentProfile() {
                     href={`mailto:${contact.email}`}
                     className="block border border-zinc-200 rounded-xl p-3.5 hover:border-zinc-400 hover:bg-zinc-50 transition-colors"
                   >
-                    <span className="text-xs font-medium text-zinc-400 block">
+                    <span className="text-xs font-medium text-zinc-500 block">
                       Email
                     </span>
 
@@ -347,7 +352,7 @@ function StudentProfile() {
                     rel="noreferrer"
                     className="block border border-zinc-200 rounded-xl p-3.5 hover:border-zinc-400 hover:bg-zinc-50 transition-colors"
                   >
-                    <span className="text-xs font-medium text-zinc-400 block">
+                    <span className="text-xs font-medium text-zinc-500 block">
                       WhatsApp
                     </span>
 

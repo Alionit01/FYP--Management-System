@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, UserPlus, UserMinus } from "lucide-react";
 import API_URL from "../api";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 const MAX_TEAM_MEMBERS = 4;
 
@@ -11,10 +12,12 @@ function MyTeam() {
   const [team, setTeam] = useState(null);
   const [members, setMembers] = useState([]);
   const [students, setStudents] = useState([]);
+  const [invitations, setInvitations] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState("");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [confirmState, setConfirmState] = useState(null);
 
   const token = localStorage.getItem("access_token");
   const studentId = localStorage.getItem("student_id");
@@ -67,19 +70,36 @@ function MyTeam() {
 
   useEffect(() => {
     fetchTeam();
+    fetch(`${API_URL}/my-invitations`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` },
+    })
+      .then((response) => response.ok ? response.json() : [])
+      .then(setInvitations)
+      .catch(() => setInvitations([]));
   }, []);
 
+  const respondToInvitation = async (invitationId, accept) => {
+    setError("");
+    try {
+      const response = await fetch(
+        `${API_URL}/invitations/${invitationId}${accept ? "/accept" : ""}`,
+        {
+          method: accept ? "POST" : "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(typeof data.detail === "string" ? data.detail : "Could not respond to invitation.");
+      }
+      setInvitations((current) => current.filter((item) => item.id !== invitationId));
+      if (accept) await fetchTeam();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const handleLeaveTeam = async () => {
-    const confirmed = window.confirm(
-      isOwner
-        ? members.length > 1
-          ? "You are the team owner. Leaving will transfer leadership to another member. Continue?"
-          : "You are the only member. Leaving will delete this team. Continue?"
-        : "Are you sure you want to leave this team?"
-    );
-
-    if (!confirmed) return;
-
     setMessage("");
     setError("");
 
@@ -107,12 +127,6 @@ function MyTeam() {
   };
 
   const handleDeleteTeam = async () => {
-    const confirmed = window.confirm(
-      "Are you sure you want to permanently delete this team? This cannot be undone."
-    );
-
-    if (!confirmed) return;
-
     setMessage("");
     setError("");
 
@@ -139,6 +153,62 @@ function MyTeam() {
   const isOwner =
     team &&
     String(team.created_by) === String(studentId);
+
+  // Only students not already on this team can be invited.
+  const requestLeaveConfirm = () => {
+    setConfirmState({
+      title: "Leave team",
+      message: isOwner
+        ? members.length > 1
+          ? "You are the team owner. Leaving will transfer leadership to another member. Continue?"
+          : "You are the only member. Leaving will delete this team. Continue?"
+        : "Are you sure you want to leave this team?",
+      confirmLabel: "Leave Team",
+      action: "leave",
+    });
+  };
+
+  const requestDeleteConfirm = () => {
+    setConfirmState({
+      title: "Delete team",
+      message:
+        "Are you sure you want to permanently delete this team? This cannot be undone.",
+      confirmLabel: "Delete Team",
+      action: "delete",
+    });
+  };
+
+  const requestRemoveConfirm = (member) => {
+    setConfirmState({
+      title: "Remove member",
+      message: `Remove ${member.name} from the team? You can invite them again later.`,
+      confirmLabel: "Remove",
+      action: "remove",
+      memberId: member.id,
+    });
+  };
+
+  const handleConfirm = async () => {
+    const current = confirmState;
+    setConfirmState(null);
+
+    if (!current) return;
+
+    if (current.action === "leave") {
+      await handleLeaveTeam();
+    } else if (current.action === "delete") {
+      await handleDeleteTeam();
+    } else if (current.action === "remove") {
+      await handleRemoveMember(current.memberId);
+    }
+  };
+
+  const inviteStudents = students.filter(
+    (student) =>
+      !members.some(
+        (member) => String(member.id) === String(student.id)
+      )
+  );
 
   const fetchStudents = async () => {
     try {
@@ -168,7 +238,7 @@ function MyTeam() {
 
     try {
       const response = await fetch(
-        `${API_URL}/teams/${team.id}/members/${selectedStudent}`,
+        `${API_URL}/teams/${team.id}/invitations/${selectedStudent}`,
         {
           method: "POST",
           headers: {
@@ -188,20 +258,13 @@ function MyTeam() {
       }
 
       setSelectedStudent("");
-      setMessage("Member added successfully.");
-      await fetchTeam();
+      setMessage("Invitation sent. The student must accept before joining.");
     } catch (err) {
       setError(err.message);
     }
   };
 
   const handleRemoveMember = async (memberId) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to remove this member?"
-    );
-
-    if (!confirmed) return;
-
     setMessage("");
     setError("");
 
@@ -235,6 +298,46 @@ function MyTeam() {
     }
   }, [isOwner]);
 
+  // Pending invitations are actionable whether or not you already have a
+  // team, so this block is rendered in both branches below.
+  const invitationsSection =
+    invitations.length > 0 ? (
+      <div className="card p-6 mt-6">
+        <h2 className="text-lg font-semibold">Team invitations</h2>
+
+        {error && (
+          <p role="alert" className="text-red-700 mt-3">
+            {error}
+          </p>
+        )}
+
+        {invitations.map((invitation) => (
+          <div
+            key={invitation.id}
+            className="flex items-center justify-between gap-3 mt-4 flex-wrap"
+          >
+            <span>{invitation.team_name}</span>
+
+            <div className="flex gap-2">
+              <button
+                className="primary-button"
+                onClick={() => respondToInvitation(invitation.id, true)}
+              >
+                Accept
+              </button>
+
+              <button
+                className="secondary-button"
+                onClick={() => respondToInvitation(invitation.id, false)}
+              >
+                Decline
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : null;
+
   if (loading) {
     return (
       <div className="min-h-[calc(100vh-56px)] flex items-center justify-center">
@@ -243,18 +346,18 @@ function MyTeam() {
     );
   }
 
-  if (error && !team) {
+  if (error && !team && invitations.length === 0) {
     return (
       <div className="page-container max-w-4xl">
         <button
           onClick={() => navigate("/teams")}
-          className="flex items-center gap-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 mb-6 transition-colors"
+          className="flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 mb-6 transition-colors"
         >
           <ArrowLeft size={18} />
           Back to Teams
         </button>
 
-        <div className="border border-red-200 bg-red-50 text-red-700 rounded-xl p-4">
+        <div role="alert" className="border border-red-200 bg-red-50 text-red-700 rounded-xl p-4">
           {error}
         </div>
       </div>
@@ -266,7 +369,7 @@ function MyTeam() {
       <div className="page-container max-w-4xl">
         <button
           onClick={() => navigate("/teams")}
-          className="flex items-center gap-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 mb-6 transition-colors"
+          className="flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 mb-6 transition-colors"
         >
           <ArrowLeft size={18} />
           Back to Teams
@@ -281,13 +384,24 @@ function MyTeam() {
             Join or create a team to get started.
           </p>
 
-          <button
-            onClick={() => navigate("/teams")}
-            className="primary-button mt-5"
-          >
-            Browse Teams
-          </button>
+          <div className="mt-5 flex flex-col sm:flex-row justify-center gap-3">
+            <button
+              onClick={() => navigate("/teams")}
+              className="secondary-button"
+            >
+              Browse Teams
+            </button>
+
+            <button
+              onClick={() => navigate("/teams/create")}
+              className="primary-button"
+            >
+              Create a Team
+            </button>
+          </div>
         </div>
+
+        {invitationsSection}
       </div>
     );
   }
@@ -297,7 +411,7 @@ function MyTeam() {
       {/* Back */}
       <button
         onClick={() => navigate("/teams")}
-        className="flex items-center gap-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 mb-6 transition-colors"
+        className="flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 mb-6 transition-colors"
       >
         <ArrowLeft size={18} />
         Back to Teams
@@ -337,7 +451,9 @@ function MyTeam() {
             )}
 
             <div className="badge !bg-zinc-900 !text-white !border-transparent !px-3 !py-1.5">
-              {team.spots_available} spots available
+              {team.spots_available > 0
+                ? `${team.spots_available} spot${team.spots_available === 1 ? "" : "s"} available`
+                : "Full"}
             </div>
 
           </div>
@@ -365,9 +481,18 @@ function MyTeam() {
               <p className="eyebrow">
                 Skills Needed
               </p>
-              <p className="text-sm font-medium text-zinc-900 mt-1.5">
-                {team.skills_needed}
-              </p>
+
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {team.skills_needed
+                  .split(",")
+                  .map((skill) => skill.trim())
+                  .filter(Boolean)
+                  .map((skill, index) => (
+                    <span key={index} className="tag">
+                      {skill}
+                    </span>
+                  ))}
+              </div>
             </div>
           )}
 
@@ -376,9 +501,18 @@ function MyTeam() {
               <p className="eyebrow">
                 Roles Needed
               </p>
-              <p className="text-sm font-medium text-zinc-900 mt-1.5">
-                {team.roles_needed}
-              </p>
+
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {team.roles_needed
+                  .split(",")
+                  .map((role) => role.trim())
+                  .filter(Boolean)
+                  .map((role, index) => (
+                    <span key={index} className="tag">
+                      {role}
+                    </span>
+                  ))}
+              </div>
             </div>
           )}
 
@@ -387,9 +521,30 @@ function MyTeam() {
               <p className="eyebrow">
                 Contact
               </p>
-              <p className="text-sm font-medium text-zinc-900 mt-1.5 break-all">
-                {team.contact}
-              </p>
+
+              {(() => {
+                const contact = team.contact.trim();
+                const href = /^https?:\/\//i.test(contact)
+                  ? contact
+                  : /^[+\d][\d\s()+-]{6,}$/.test(contact)
+                    ? `https://wa.me/${contact.replace(/\D/g, "")}`
+                    : null;
+
+                return href ? (
+                  <a
+                    href={href}
+                    target={href.startsWith("http") ? "_blank" : undefined}
+                    rel="noreferrer"
+                    className="text-sm font-medium text-zinc-900 mt-1.5 break-all hover:underline inline-block"
+                  >
+                    {team.contact}
+                  </a>
+                ) : (
+                  <p className="text-sm font-medium text-zinc-900 mt-1.5 break-all">
+                    {team.contact}
+                  </p>
+                );
+              })()}
             </div>
           )}
 
@@ -398,16 +553,18 @@ function MyTeam() {
 
       {/* Messages */}
       {message && (
-        <div className="mt-4 bg-green-50 border border-green-200 text-green-700 rounded-xl p-4 text-sm">
+        <div role="status" className="mt-4 bg-green-50 border border-green-200 text-green-700 rounded-xl p-4 text-sm">
           {message}
         </div>
       )}
 
       {error && (
-        <div className="mt-4 bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm">
+        <div role="alert" className="mt-4 bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm">
           {error}
         </div>
       )}
+
+      {invitationsSection}
 
       {/* Members */}
       <div className="card p-5 sm:p-7 mt-6">
@@ -462,7 +619,7 @@ function MyTeam() {
                 {isOwner && !memberIsOwner && (
                   <button
                     type="button"
-                    onClick={() => handleRemoveMember(member.id)}
+                    onClick={() => requestRemoveConfirm(member)}
                     className="p-2.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors shrink-0"
                     title="Remove member"
                     aria-label={`Remove ${member.name} from the team`}
@@ -480,7 +637,7 @@ function MyTeam() {
           <div className="mt-6 pt-6 border-t border-zinc-100">
 
             <h3 className="text-sm font-semibold text-zinc-900 mb-3">
-              Add Team Member
+              Invite Team Member
             </h3>
 
             <div className="flex flex-col sm:flex-row gap-3">
@@ -489,12 +646,15 @@ function MyTeam() {
                 value={selectedStudent}
                 onChange={(e) => setSelectedStudent(e.target.value)}
                 className="input-field flex-1 !py-2.5"
+                aria-label="Select a student to invite"
               >
                 <option value="">Select a student</option>
 
-                {students.map((student) => (
+                {inviteStudents.map((student) => (
                   <option key={student.id} value={student.id}>
-                    {student.name} — {student.program}
+                    {student.program
+                      ? `${student.name} — ${student.program}`
+                      : student.name}
                   </option>
                 ))}
               </select>
@@ -506,7 +666,7 @@ function MyTeam() {
                 className="primary-button !py-2.5 shrink-0"
               >
                 <UserPlus size={17} />
-                Add Member
+                Send Invitation
               </button>
 
             </div>
@@ -526,8 +686,9 @@ function MyTeam() {
 
       {/* Leave / Delete Team */}
       <div className="mt-6 flex flex-col sm:flex-row gap-3">
+
         <button
-          onClick={handleLeaveTeam}
+          onClick={requestLeaveConfirm}
           className="danger-button w-full sm:w-auto"
         >
           Leave Team
@@ -535,13 +696,23 @@ function MyTeam() {
 
         {isOwner && (
           <button
-            onClick={handleDeleteTeam}
+            onClick={requestDeleteConfirm}
             className="danger-button w-full sm:w-auto"
           >
             Delete Team
           </button>
         )}
       </div>
+
+      {confirmState && (
+        <ConfirmDialog
+          title={confirmState.title}
+          message={confirmState.message}
+          confirmLabel={confirmState.confirmLabel}
+          onCancel={() => setConfirmState(null)}
+          onConfirm={handleConfirm}
+        />
+      )}
 
     </div>
   );

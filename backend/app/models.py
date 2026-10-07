@@ -1,11 +1,13 @@
 from sqlalchemy import (
     Boolean,
     Column,
+    DateTime,
+    ForeignKey,
     Integer,
+    JSON,
     String,
     Text,
     UniqueConstraint,
-    ForeignKey,
 )
 from .database import Base
 
@@ -32,6 +34,15 @@ class Student(Base):
     )
     verification_token = Column(String, nullable=True)
 
+class PendingRegistration(Base):
+    __tablename__ = "pending_registrations"
+
+    id = Column(Integer, primary_key=True)
+    token_hash = Column(String(64), unique=True, nullable=False, index=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    student_data = Column(JSON, nullable=False)
+
+
 class Team(Base):
     __tablename__ = "teams"
 
@@ -49,6 +60,25 @@ class Team(Base):
         ForeignKey("students.id"),
         nullable=False
     )
+
+class TeamInvitation(Base):
+    __tablename__ = "team_invitations"
+
+    id = Column(Integer, primary_key=True)
+    team_id = Column(
+        Integer, ForeignKey("teams.id", ondelete="CASCADE"), nullable=False
+    )
+    student_id = Column(
+        Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False
+    )
+    invited_by = Column(
+        Integer, ForeignKey("students.id"), nullable=False
+    )
+
+    __table_args__ = (
+        UniqueConstraint("team_id", "student_id", name="unique_team_invitee"),
+    )
+
 
 class TeamMember(Base):
     __tablename__ = "team_members"

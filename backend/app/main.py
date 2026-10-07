@@ -1,9 +1,11 @@
+import hashlib
 import os
 import secrets
 import time
 from collections import deque
+from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import text
+from sqlalchemy import func, text
 from sqlalchemy.exc import IntegrityError
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -18,11 +20,13 @@ from .schemas import (
     StudentCreate,
     TeamCreate,
     StudentLogin,
+    VerificationRequest,
     StudentUpdate,
     TeamUpdate,
     MAX_TEAM_MEMBERS
 )
 from .auth import hash_password, verify_password, create_access_token
+from .email import send_verification_email
 from fastapi import FastAPI, HTTPException, Depends, Request
 from .dependencies import get_current_student
 
@@ -106,117 +110,118 @@ async def security_headers(request, call_next):
 # AUTHENTICATION
 # =========================
 
-@app.post("/students")
+VERIFICATION_TTL = timedelta(hours=1)
+
+
+def _token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+@app.post("/students", status_code=202)
 def create_student(student: StudentCreate):
-
     university_domain = os.getenv("UNIVERSITY_EMAIL_DOMAIN")
-
     if not university_domain:
-        raise HTTPException(
-            status_code=500,
-            detail="University email domain is not configured"
-        )
-
-    if not student.email.lower().endswith(
-        "@" + university_domain.lower()
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="University email required"
-        )
-
-    db = database.SessionLocal()
+        raise HTTPException(status_code=500, detail="University email domain is not configured")
 
     email = student.email.lower()
+    if not email.endswith("@" + university_domain.lower()):
+        raise HTTPException(status_code=403, detail="University email required")
 
+    # The university email local part is the authoritative university ID.
+    if student.university_id.strip().lower() != email.rsplit("@", 1)[0]:
+        raise HTTPException(
+            status_code=400, detail="University ID must match your email address"
+        )
+    if student.program not in PROGRAMS:
+        raise HTTPException(status_code=400, detail="Invalid program")
+    if student.fyp_status and student.fyp_status not in FYP_STATUSES:
+        raise HTTPException(status_code=400, detail="Invalid FYP status")
+
+    db = database.SessionLocal()
+    token = secrets.token_urlsafe(32)
     try:
-        existing_student = db.query(models.Student).filter(
+        db.query(models.PendingRegistration).filter(
+            models.PendingRegistration.expires_at <= datetime.now(timezone.utc)
+        ).delete()
+        if db.query(models.Student).filter(
+            models.Student.email_verified.is_(True),
             (models.Student.email == email) |
-            (models.Student.university_id == student.university_id)
-        ).first()
+            (func.lower(models.Student.university_id) == student.university_id.strip().lower())
+        ).first():
+            raise HTTPException(status_code=400, detail="Email or university ID already registered")
 
-        if existing_student:
-            raise HTTPException(
-                status_code=400,
-                detail="Email or university ID already registered"
-            )
-
-        if student.program not in PROGRAMS:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid program"
-            )
-
-        if student.fyp_status and student.fyp_status not in FYP_STATUSES:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid FYP status"
-            )
-
-        new_student = models.Student(
-            name=student.name,
-            university_id=student.university_id,
-            email=email,
-            password=hash_password(student.password),
-            program=student.program,
-            profile_picture=student.profile_picture,
-            bio=student.bio,
-            github=student.github,
-            linkedin=student.linkedin,
-            whatsapp=student.whatsapp,
-            skills=student.skills,
-            interests=student.interests,
-            fyp_status=student.fyp_status,
-            email_verified=False,
-            verification_token=secrets.token_urlsafe(32)
+        data = student.model_dump()
+        data["email"] = email
+        data["university_id"] = student.university_id.strip().upper()
+        pending = models.PendingRegistration(
+            token_hash=_token_hash(token),
+            expires_at=datetime.now(timezone.utc) + VERIFICATION_TTL,
+            student_data=data,
         )
+        db.add(pending)
+        db.commit()
 
-        db.add(new_student)
         try:
+            send_verification_email(email, token)
+        except Exception:
+            # SMTP libraries raise several types of errors. Do not expose
+            # the message or token in a response or log.
+            db.delete(pending)
             db.commit()
-        except IntegrityError:
-            db.rollback()
-            raise HTTPException(
-                status_code=400,
-                detail="Email or university ID already registered"
-            )
-        db.refresh(new_student)
+            raise HTTPException(status_code=503, detail="Could not send verification email") from None
 
-        # NOTE: no SMTP is configured in this project, so the
-        # verification link is logged (and returned in dev mode).
-        verify_url = (
-            f"/verify-email?token={new_student.verification_token}"
-        )
-        print(f"[DEV] Email verification link for {email}: {verify_url}")
-
-        return {
-            "message": (
-                "Student created successfully. "
-                "Please verify your email before logging in."
-            ),
-            "student_id": new_student.id
-        }
+        return {"message": "Check your university email for a verification link."}
     finally:
         db.close()
 
 
-@app.get("/verify-email")
-def verify_email(token: str):
+@app.post("/verify-email")
+def verify_email(request: VerificationRequest):
+    token = request.token
     db = database.SessionLocal()
     try:
-        student = db.query(models.Student).filter(
-            models.Student.verification_token == token
-        ).first()
+        pending = db.query(models.PendingRegistration).filter(
+            models.PendingRegistration.token_hash == _token_hash(token)
+        ).with_for_update().first()
+        if not pending:
+            raise HTTPException(status_code=400, detail="Invalid or expired verification token")
 
-        if not student:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid or expired verification token"
-            )
+        expires_at = pending.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) >= expires_at:
+            db.delete(pending)
+            db.commit()
+            raise HTTPException(status_code=400, detail="Invalid or expired verification token")
 
-        student.email_verified = True
-        student.verification_token = None
-        db.commit()
+        data = dict(pending.student_data)
+        data["password"] = hash_password(request.password)
+        existing = db.query(models.Student).filter(
+            (models.Student.email == data["email"]) |
+            (func.lower(models.Student.university_id) == data["university_id"].lower())
+        ).with_for_update().all()
+        if any(student.email_verified for student in existing):
+            raise HTTPException(status_code=409, detail="Email or university ID already registered")
+        if len(existing) > 1:
+            # Conflicting legacy, unverified records require manual review;
+            # never overwrite or discard multiple accounts automatically.
+            raise HTTPException(status_code=409, detail="Conflicting unverified accounts; contact support")
+
+        if existing:
+            # Allow the verified mailbox owner to reclaim a legacy unverified
+            # row that was previously reserving this identity.
+            for field, value in data.items():
+                setattr(existing[0], field, value)
+            existing[0].email_verified = True
+            existing[0].verification_token = None
+        else:
+            db.add(models.Student(**data, email_verified=True))
+        db.delete(pending)
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(status_code=409, detail="Email or university ID already registered")
 
         return {"message": "Email verified successfully"}
     finally:
@@ -702,8 +707,10 @@ def delete_team(
                 detail="Only the team owner can delete the team"
             )
 
-        # Remove memberships explicitly (FK cascade also covers this,
-        # but do it explicitly so we don't rely on DB-level cascade)
+        # Remove dependent records explicitly instead of relying on DB cascades.
+        db.query(models.TeamInvitation).filter(
+            models.TeamInvitation.team_id == team_id
+        ).delete()
         db.query(models.TeamMember).filter(
             models.TeamMember.team_id == team_id
         ).delete()
@@ -761,12 +768,18 @@ def leave_team(
             ).order_by(models.TeamMember.id).first()
 
             if next_membership is None:
+                db.query(models.TeamInvitation).filter(
+                    models.TeamInvitation.team_id == team_id
+                ).delete()
                 db.delete(team)
                 db.commit()
                 return {
                     "message": "You left the team and it was removed"
                 }
 
+            db.query(models.TeamInvitation).filter(
+                models.TeamInvitation.team_id == team_id
+            ).delete()
             team.created_by = next_membership.student_id
             team.spots_available += 1
             _clamp_spots_available(db, team)
@@ -1004,114 +1017,135 @@ def get_team_contact(
         "contact": team.contact
     }
 
-@app.post("/teams/{team_id}/members/{student_id}")
-def add_team_member(
+@app.post("/teams/{team_id}/invitations/{student_id}")
+def invite_team_member(
     team_id: int,
     student_id: int,
     current_student: models.Student = Depends(get_current_student)
 ):
     db = database.SessionLocal()
-
-    team = db.query(models.Team).filter(
-        models.Team.id == team_id
-    ).with_for_update().first()
-
-    if not team:
-        db.close()
-        raise HTTPException(status_code=404, detail="Team not found")
-
-    # Only the owner can add members
-    if team.created_by != current_student.id:
-        db.close()
-        raise HTTPException(
-            status_code=403,
-            detail="Only the team owner can add members"
-        )
-
-    student = db.query(models.Student).filter(
-        models.Student.id == student_id
-    ).first()
-
-    if not student:
-        db.close()
-        raise HTTPException(
-            status_code=404,
-            detail="Student not found"
-        )
-
-    # Check whether already in this team
-    existing_membership = db.query(models.TeamMember).filter(
-        models.TeamMember.team_id == team_id,
-        models.TeamMember.student_id == student_id
-    ).first()
-
-    if existing_membership:
-        db.close()
-        raise HTTPException(
-            status_code=400,
-            detail="Student is already a member of this team"
-        )
-
-    # Check whether student is already in another team
-    existing_team = db.query(models.TeamMember).filter(
-        models.TeamMember.student_id == student_id
-    ).first()
-
-    if existing_team:
-        db.close()
-        raise HTTPException(
-            status_code=400,
-            detail="Student is already a member of another team"
-        )
-
-    # Check hard member cap (owner + members can never exceed MAX_TEAM_MEMBERS)
-    current_members = db.query(models.TeamMember).filter(
-        models.TeamMember.team_id == team_id
-    ).count()
-    if current_members >= MAX_TEAM_MEMBERS:
-        db.close()
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"This team already has the maximum of "
-                f"{MAX_TEAM_MEMBERS} members"
-            )
-        )
-    # Check available spots
-    if team.spots_available <= 0:
-        db.close()
-        raise HTTPException(
-            status_code=400,
-            detail="This team has no available spots"
-        )
-
-    membership = models.TeamMember(
-        team_id=team_id,
-        student_id=student_id
-    )
-
-    db.add(membership)
-
-    team.spots_available -= 1
-    _clamp_spots_available(db, team)
-
     try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
+        team = db.query(models.Team).filter(
+            models.Team.id == team_id
+        ).with_for_update().first()
+        if not team:
+            raise HTTPException(status_code=404, detail="Team not found")
+        if team.created_by != current_student.id:
+            raise HTTPException(status_code=403, detail="Only the team owner can invite members")
+
+        student = db.query(models.Student).filter(
+            models.Student.id == student_id,
+            models.Student.email_verified.is_(True)
+        ).first()
+        if not student:
+            raise HTTPException(status_code=404, detail="Verified student not found")
+        if db.query(models.TeamMember).filter(
+            models.TeamMember.student_id == student_id
+        ).first():
+            raise HTTPException(status_code=400, detail="Student is already in a team")
+        if team.spots_available <= 0 or db.query(models.TeamMember).filter(
+            models.TeamMember.team_id == team_id
+        ).count() >= MAX_TEAM_MEMBERS:
+            raise HTTPException(status_code=400, detail="This team has no available spots")
+
+        db.add(models.TeamInvitation(
+            team_id=team_id, student_id=student_id, invited_by=current_student.id
+        ))
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(status_code=409, detail="Invitation already pending")
+        return {"message": "Invitation sent; the student must accept to join"}
+    finally:
         db.close()
-        raise HTTPException(
-            status_code=400,
-            detail="Student could not be added to the team"
-        )
-    db.refresh(team)
 
-    db.close()
 
-    return {
-        "message": "Student added to team",
-        "spots_available": team.spots_available
-    }
+@app.get("/my-invitations")
+def get_my_invitations(current_student: models.Student = Depends(get_current_student)):
+    db = database.SessionLocal()
+    try:
+        rows = db.query(models.TeamInvitation, models.Team).join(
+            models.Team, models.Team.id == models.TeamInvitation.team_id
+        ).filter(models.TeamInvitation.student_id == current_student.id).all()
+        return [
+            {"id": invitation.id, "team_id": team.id, "team_name": team.name}
+            for invitation, team in rows
+            if invitation.invited_by == team.created_by
+        ]
+    finally:
+        db.close()
+
+
+@app.post("/invitations/{invitation_id}/accept")
+def accept_invitation(
+    invitation_id: int,
+    current_student: models.Student = Depends(get_current_student)
+):
+    db = database.SessionLocal()
+    try:
+        # Lock the team before the invitation so member-count and spot updates
+        # are serialized with other team mutations.
+        invitation_team = db.query(models.TeamInvitation.team_id).filter(
+            models.TeamInvitation.id == invitation_id,
+            models.TeamInvitation.student_id == current_student.id
+        ).first()
+        if not invitation_team:
+            raise HTTPException(status_code=404, detail="Invitation not found")
+        team = db.query(models.Team).filter(
+            models.Team.id == invitation_team.team_id
+        ).with_for_update().first()
+        if not team:
+            raise HTTPException(status_code=404, detail="Team not found")
+        invitation = db.query(models.TeamInvitation).filter(
+            models.TeamInvitation.id == invitation_id,
+            models.TeamInvitation.student_id == current_student.id
+        ).with_for_update().first()
+        if not invitation or invitation.team_id != team.id:
+            raise HTTPException(status_code=404, detail="Invitation not found")
+        if invitation.invited_by != team.created_by:
+            raise HTTPException(status_code=409, detail="Invitation is no longer valid")
+        if db.query(models.TeamMember).filter(
+            models.TeamMember.student_id == current_student.id
+        ).first():
+            raise HTTPException(status_code=409, detail="You are already in a team")
+        if team.spots_available <= 0 or db.query(models.TeamMember).filter(
+            models.TeamMember.team_id == team.id
+        ).count() >= MAX_TEAM_MEMBERS:
+            raise HTTPException(status_code=409, detail="This team has no available spots")
+
+        db.add(models.TeamMember(team_id=team.id, student_id=current_student.id))
+        db.delete(invitation)
+        team.spots_available -= 1
+        _clamp_spots_available(db, team)
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(status_code=409, detail="Could not join the team")
+        return {"message": "You joined the team"}
+    finally:
+        db.close()
+
+
+@app.delete("/invitations/{invitation_id}")
+def decline_invitation(
+    invitation_id: int,
+    current_student: models.Student = Depends(get_current_student)
+):
+    db = database.SessionLocal()
+    try:
+        invitation = db.query(models.TeamInvitation).filter(
+            models.TeamInvitation.id == invitation_id,
+            models.TeamInvitation.student_id == current_student.id
+        ).first()
+        if not invitation:
+            raise HTTPException(status_code=404, detail="Invitation not found")
+        db.delete(invitation)
+        db.commit()
+        return {"message": "Invitation declined"}
+    finally:
+        db.close()
 
 @app.delete("/teams/{team_id}/members/{student_id}")
 def remove_team_member(

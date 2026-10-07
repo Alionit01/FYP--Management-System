@@ -92,7 +92,7 @@ function TeamProfile() {
       <button
         type="button"
         onClick={() => navigate("/teams")}
-        className="inline-flex items-center gap-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 cursor-pointer transition-colors"
+        className="inline-flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 cursor-pointer transition-colors"
       >
         <ArrowLeft size={18} />
         <span>Back to Teams</span>
@@ -122,7 +122,7 @@ function TeamProfile() {
               className={`text-xs font-semibold px-3 py-1.5 rounded-full ${
                 team.spots_available > 0
                   ? "bg-zinc-900 text-white"
-                  : "bg-zinc-100 text-zinc-500"
+                  : "bg-zinc-100 text-zinc-600"
               }`}
             >
               {team.spots_available > 0
@@ -231,8 +231,9 @@ function TeamProfile() {
             Members
           </h2>
 
-          <span className="text-sm font-medium text-zinc-500">
-            {team.members?.length || 0}
+          <span className="text-sm font-medium text-zinc-600">
+            {team.members?.length || 0}{" "}
+            {team.members?.length === 1 ? "member" : "members"}
           </span>
         </div>
 
@@ -264,7 +265,7 @@ function TeamProfile() {
                   </div>
                 </div>
 
-                <span className="text-sm font-medium text-zinc-400 shrink-0">
+                <span className="text-sm font-medium text-zinc-500 shrink-0">
                   View
                 </span>
               </Link>

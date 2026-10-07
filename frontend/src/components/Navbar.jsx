@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -24,6 +24,36 @@ function Navbar() {
   const handleLinkClick = () => {
     setMenuOpen(false);
   };
+
+  // Close the mobile menu with Escape, via an outside tap/click, and
+  // lock the page scroll while it's open.
+  const headerRef = useRef(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+
+    const handlePointerDown = (event) => {
+      if (headerRef.current && !headerRef.current.contains(event.target)) {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("pointerdown", handlePointerDown);
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [menuOpen]);
 
   return (
     <>
@@ -102,7 +132,10 @@ function Navbar() {
       </nav>
 
       {/* Mobile Top Bar */}
-      <header className="md:hidden sticky top-0 z-40 border-b border-zinc-200/80 bg-white/95 backdrop-blur">
+      <header
+        ref={headerRef}
+        className="md:hidden sticky top-0 z-40 border-b border-zinc-200/80 bg-white/95 backdrop-blur"
+      >
         <div className="h-14 px-4 flex items-center justify-between">
           <Link
             to="/"

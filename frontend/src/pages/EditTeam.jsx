@@ -59,8 +59,31 @@ function EditTeam() {
           spots_available: data.spots_available ?? 0,
           skills_needed: data.skills_needed || "",
           roles_needed: data.roles_needed || "",
-          contact: data.contact || "",
+          contact: "",
         });
+
+        // GET /teams/{id} does not expose contact — fetch it separately
+        // with the owner's token so editing does not wipe the saved value.
+        try {
+          const contactResponse = await fetch(
+            `${API_URL}/teams/${id}/contact`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
+          if (contactResponse.ok) {
+            const contactData = await contactResponse.json();
+            setForm((current) => ({
+              ...current,
+              contact: contactData.contact || "",
+            }));
+          }
+        } catch {
+          // Contact simply stays empty; never fail the whole page over it.
+        }
       } catch (err) {
         setError(err.message);
       } finally {
@@ -69,7 +92,7 @@ function EditTeam() {
     };
 
     fetchTeam();
-  }, [id, navigate]);
+  }, [id, navigate, token]);
 
   const handleChange = (e) => {
     setForm({
@@ -123,7 +146,7 @@ function EditTeam() {
     <main className="page-container max-w-3xl">
       <button
         onClick={() => navigate(`/teams/${id}`)}
-        className="text-sm font-medium text-zinc-500 hover:text-zinc-900 mb-6 transition-colors"
+        className="text-sm font-medium text-zinc-600 hover:text-zinc-900 mb-6 transition-colors"
       >
         ← Back to Team
       </button>
@@ -143,52 +166,71 @@ function EditTeam() {
         className="card p-6 sm:p-8 space-y-6"
       >
         <div>
-          <label className="block text-sm font-medium text-zinc-700 mb-2">
+          <label
+            htmlFor="name"
+            className="block text-sm font-medium text-zinc-700 mb-2"
+          >
             Team Name
           </label>
 
           <input
+            id="name"
             name="name"
             value={form.name}
             onChange={handleChange}
             required
+            placeholder="e.g. Team Alpha"
             className="input-field"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-700 mb-2">
+          <label
+            htmlFor="project_title"
+            className="block text-sm font-medium text-zinc-700 mb-2"
+          >
             Project Title
           </label>
 
           <input
+            id="project_title"
             name="project_title"
             value={form.project_title}
             onChange={handleChange}
+            placeholder="Leave empty if not decided yet"
             className="input-field"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-700 mb-2">
+          <label
+            htmlFor="description"
+            className="block text-sm font-medium text-zinc-700 mb-2"
+          >
             About Project
           </label>
 
           <textarea
+            id="description"
             name="description"
             value={form.description}
             onChange={handleChange}
             rows={5}
+            placeholder="Briefly describe your project or idea..."
             className="input-field resize-none"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-700 mb-2">
+          <label
+            htmlFor="department_preference"
+            className="block text-sm font-medium text-zinc-700 mb-2"
+          >
             Department Preference
           </label>
 
           <select
+            id="department_preference"
             name="department_preference"
             value={form.department_preference}
             onChange={handleChange}
@@ -203,11 +245,15 @@ function EditTeam() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-700 mb-2">
+          <label
+            htmlFor="spots_available"
+            className="block text-sm font-medium text-zinc-700 mb-2"
+          >
             Additional Spots Available
           </label>
 
           <input
+            id="spots_available"
             type="number"
             name="spots_available"
             min="0"
@@ -219,11 +265,15 @@ function EditTeam() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-700 mb-2">
+          <label
+            htmlFor="skills_needed"
+            className="block text-sm font-medium text-zinc-700 mb-2"
+          >
             Skills Needed
           </label>
 
           <input
+            id="skills_needed"
             name="skills_needed"
             value={form.skills_needed}
             onChange={handleChange}
@@ -233,11 +283,15 @@ function EditTeam() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-700 mb-2">
+          <label
+            htmlFor="roles_needed"
+            className="block text-sm font-medium text-zinc-700 mb-2"
+          >
             Roles Needed
           </label>
 
           <input
+            id="roles_needed"
             name="roles_needed"
             value={form.roles_needed}
             onChange={handleChange}
@@ -247,11 +301,15 @@ function EditTeam() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-700 mb-2">
+          <label
+            htmlFor="contact"
+            className="block text-sm font-medium text-zinc-700 mb-2"
+          >
             Contact
           </label>
 
           <input
+            id="contact"
             name="contact"
             value={form.contact}
             onChange={handleChange}
@@ -261,18 +319,28 @@ function EditTeam() {
         </div>
 
         {error && (
-          <div className="border border-red-200 bg-red-50 text-red-700 rounded-lg px-4 py-3 text-sm">
+          <div role="alert" className="border border-red-200 bg-red-50 text-red-700 rounded-lg px-4 py-3 text-sm">
             {error}
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="primary-button w-full !py-3"
-        >
-          {saving ? "Saving..." : "Save Changes"}
-        </button>
+        <div className="pt-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => navigate(`/teams/${id}`)}
+            className="secondary-button"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            disabled={saving}
+            className="primary-button !px-6 !py-3"
+          >
+            {saving ? "Saving..." : "Save Changes"}
+          </button>
+        </div>
       </form>
     </main>
   );

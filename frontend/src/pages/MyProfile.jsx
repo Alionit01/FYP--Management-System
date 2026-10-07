@@ -124,7 +124,7 @@ function MyProfile() {
   if (!profile || !form) {
     return (
       <main className="page-container max-w-3xl">
-        <div className="border border-red-200 bg-red-50 rounded-2xl p-6">
+        <div role="alert" className="border border-red-200 bg-red-50 rounded-2xl p-6">
           <p className="text-red-700">
             {error || "Could not load your profile."}
           </p>
@@ -162,11 +162,15 @@ function MyProfile() {
 
           <div className="mt-5 space-y-5">
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-2">
+              <label
+                htmlFor="name"
+                className="block text-sm font-medium text-zinc-700 mb-2"
+              >
                 Name
               </label>
 
               <input
+                id="name"
                 type="text"
                 name="name"
                 value={form.name}
@@ -178,11 +182,15 @@ function MyProfile() {
 
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-2">
+                <label
+                  htmlFor="university_id"
+                  className="block text-sm font-medium text-zinc-700 mb-2"
+                >
                   University ID
                 </label>
 
                 <input
+                  id="university_id"
                   type="text"
                   value={profile.university_id}
                   disabled
@@ -191,11 +199,15 @@ function MyProfile() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-2">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-zinc-700 mb-2"
+                >
                   University Email
                 </label>
 
                 <input
+                  id="email"
                   type="text"
                   value={profile.email}
                   disabled
@@ -205,11 +217,15 @@ function MyProfile() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-2">
+              <label
+                htmlFor="program"
+                className="block text-sm font-medium text-zinc-700 mb-2"
+              >
                 Program
               </label>
 
               <select
+                id="program"
                 name="program"
                 value={form.program}
                 onChange={handleChange}
@@ -225,11 +241,15 @@ function MyProfile() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-2">
+              <label
+                htmlFor="fyp_status"
+                className="block text-sm font-medium text-zinc-700 mb-2"
+              >
                 FYP Status
               </label>
 
               <select
+                id="fyp_status"
                 name="fyp_status"
                 value={form.fyp_status}
                 onChange={handleChange}
@@ -259,11 +279,15 @@ function MyProfile() {
 
           <div className="mt-5 space-y-5">
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-2">
+              <label
+                htmlFor="profile_picture"
+                className="block text-sm font-medium text-zinc-700 mb-2"
+              >
                 Profile Picture URL
               </label>
 
               <input
+                id="profile_picture"
                 type="url"
                 name="profile_picture"
                 value={form.profile_picture}
@@ -274,11 +298,15 @@ function MyProfile() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-2">
+              <label
+                htmlFor="bio"
+                className="block text-sm font-medium text-zinc-700 mb-2"
+              >
                 Bio
               </label>
 
               <textarea
+                id="bio"
                 name="bio"
                 value={form.bio}
                 onChange={handleChange}
@@ -289,11 +317,15 @@ function MyProfile() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-2">
+              <label
+                htmlFor="skills"
+                className="block text-sm font-medium text-zinc-700 mb-2"
+              >
                 Skills
               </label>
 
               <input
+                id="skills"
                 type="text"
                 name="skills"
                 value={form.skills}
@@ -304,11 +336,15 @@ function MyProfile() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-2">
+              <label
+                htmlFor="interests"
+                className="block text-sm font-medium text-zinc-700 mb-2"
+              >
                 Interests
               </label>
 
               <input
+                id="interests"
                 type="text"
                 name="interests"
                 value={form.interests}
@@ -330,11 +366,15 @@ function MyProfile() {
 
           <div className="mt-5 space-y-5">
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-2">
+              <label
+                htmlFor="github"
+                className="block text-sm font-medium text-zinc-700 mb-2"
+              >
                 GitHub
               </label>
 
               <input
+                id="github"
                 type="url"
                 name="github"
                 value={form.github}
@@ -345,11 +385,15 @@ function MyProfile() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-2">
+              <label
+                htmlFor="linkedin"
+                className="block text-sm font-medium text-zinc-700 mb-2"
+              >
                 LinkedIn
               </label>
 
               <input
+                id="linkedin"
                 type="url"
                 name="linkedin"
                 value={form.linkedin}
@@ -360,11 +404,15 @@ function MyProfile() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-2">
+              <label
+                htmlFor="whatsapp"
+                className="block text-sm font-medium text-zinc-700 mb-2"
+              >
                 WhatsApp
               </label>
 
               <input
+                id="whatsapp"
                 type="text"
                 name="whatsapp"
                 value={form.whatsapp}
@@ -373,7 +421,7 @@ function MyProfile() {
                 className="input-field"
               />
 
-              <p className="text-xs text-zinc-400 mt-2">
+              <p className="text-xs text-zinc-500 mt-2">
                 Your contact details are not shown publicly.
               </p>
             </div>
@@ -381,13 +429,16 @@ function MyProfile() {
         </section>
 
         {error && (
-          <div className="mt-7 border border-red-200 bg-red-50 text-red-700 rounded-lg px-4 py-3 text-sm">
+          <div role="alert" className="mt-7 border border-red-200 bg-red-50 text-red-700 rounded-lg px-4 py-3 text-sm">
             {error}
           </div>
         )}
 
         {message && (
-          <div className="mt-7 border border-zinc-200 bg-zinc-50 text-zinc-700 rounded-lg px-4 py-3 text-sm">
+          <div
+            role="status"
+            className="mt-7 border border-green-200 bg-green-50 text-green-700 rounded-lg px-4 py-3 text-sm"
+          >
             {message}
           </div>
         )}

@@ -34,7 +34,6 @@ class StudentCreate(BaseModel):
     name: str = Field(min_length=2, max_length=100)
     university_id: str = Field(min_length=1, max_length=50)
     email: EmailStr
-    password: str = Field(min_length=6, max_length=72)
     program: str
 
     profile_picture: Optional[str] = None
@@ -46,16 +45,6 @@ class StudentCreate(BaseModel):
     interests: Optional[str] = Field(default=None, max_length=1000)
     fyp_status: Optional[str] = None
 
-
-    @field_validator("password")
-    @classmethod
-    def _check_password_bytes(cls, v):
-        # bcrypt operates on bytes; 72 chars may exceed 72 bytes
-        if len(v.encode("utf-8")) > 72:
-            raise ValueError(
-                "Password must be at most 72 bytes (UTF-8)"
-            )
-        return v
 
     @field_validator("github", "linkedin", "profile_picture")
     @classmethod
@@ -78,6 +67,18 @@ class TeamCreate(BaseModel):
     skills_needed: Optional[str] = Field(default=None, max_length=1000)
     roles_needed: Optional[str] = Field(default=None, max_length=1000)
     contact: Optional[str] = Field(default=None, max_length=200)
+
+
+class VerificationRequest(BaseModel):
+    token: str = Field(min_length=1, max_length=128)
+    password: str = Field(min_length=6, max_length=72)
+
+    @field_validator("password")
+    @classmethod
+    def _check_password_bytes(cls, v):
+        if len(v.encode("utf-8")) > 72:
+            raise ValueError("Password must be at most 72 bytes (UTF-8)")
+        return v
 
 
 class StudentLogin(BaseModel):
