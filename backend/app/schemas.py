@@ -81,6 +81,22 @@ class VerificationRequest(BaseModel):
         return v
 
 
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordReset(BaseModel):
+    token: str = Field(min_length=1, max_length=128)
+    password: str = Field(min_length=6, max_length=72)
+
+    @field_validator("password")
+    @classmethod
+    def _check_password_bytes(cls, v):
+        if len(v.encode("utf-8")) > 72:
+            raise ValueError("Password must be at most 72 bytes (UTF-8)")
+        return v
+
+
 class StudentLogin(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=72)

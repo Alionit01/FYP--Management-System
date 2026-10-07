@@ -43,6 +43,15 @@ class PendingRegistration(Base):
     student_data = Column(JSON, nullable=False)
 
 
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True)
+    token_hash = Column(String(64), unique=True, nullable=False, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+
+
 class Team(Base):
     __tablename__ = "teams"
 

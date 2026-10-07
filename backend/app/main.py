@@ -23,10 +23,12 @@ from .schemas import (
     VerificationRequest,
     StudentUpdate,
     TeamUpdate,
+    PasswordResetRequest,
+    PasswordReset,
     MAX_TEAM_MEMBERS
 )
 from .auth import hash_password, verify_password, create_access_token
-from .email import send_verification_email
+from .email import send_verification_email, send_password_reset_email
 from fastapi import FastAPI, HTTPException, Depends, Request
 from .dependencies import get_current_student
 
@@ -305,6 +307,94 @@ def login(student: StudentLogin, request: Request):
             "token_type": "bearer",
             "student_id": user.id
         }
+    finally:
+        db.close()
+
+
+@app.post("/forgot-password")
+def forgot_password(request: schemas.PasswordResetRequest):
+    db = database.SessionLocal()
+
+    try:
+        student = db.query(models.Student).filter(
+            models.Student.email == request.email.lower(),
+            models.Student.email_verified.is_(True),
+        ).first()
+
+        if student:
+            # Invalidate any previous reset links for this account.
+            db.query(models.PasswordResetToken).filter(
+                models.PasswordResetToken.student_id == student.id
+            ).delete()
+
+            token = secrets.token_urlsafe(32)
+            db.add(models.PasswordResetToken(
+                token_hash=_token_hash(token),
+                student_id=student.id,
+                expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+            ))
+            db.commit()
+
+            try:
+                send_password_reset_email(student.email, token)
+            except Exception:
+                db.query(models.PasswordResetToken).filter(
+                    models.PasswordResetToken.student_id == student.id
+                ).delete()
+                db.commit()
+                raise HTTPException(
+                    status_code=503,
+                    detail="Could not send password reset email",
+                ) from None
+    finally:
+        db.close()
+
+    # Always return the same generic message so account existence is not
+    # revealed.
+    return {
+        "message": "If that email is registered, a password reset link has been sent."
+    }
+
+
+@app.post("/reset-password")
+def reset_password(request: schemas.PasswordReset):
+    db = database.SessionLocal()
+
+    try:
+        row = db.query(models.PasswordResetToken).filter(
+            models.PasswordResetToken.token_hash == _token_hash(request.token)
+        ).first()
+
+        if not row:
+            raise HTTPException(
+                status_code=400, detail="Invalid or expired reset link"
+            )
+
+        expires_at = row.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+        if datetime.now(timezone.utc) >= expires_at:
+            db.delete(row)
+            db.commit()
+            raise HTTPException(
+                status_code=400, detail="Invalid or expired reset link"
+            )
+
+        student = db.query(models.Student).filter(
+            models.Student.id == row.student_id
+        ).first()
+
+        if not student:
+            raise HTTPException(
+                status_code=400, detail="Invalid or expired reset link"
+            )
+
+        student.password = hash_password(request.password)
+        db.delete(row)
+        db.commit()
+
+        return {"message": "Password updated. You can now sign in."}
     finally:
         db.close()
 

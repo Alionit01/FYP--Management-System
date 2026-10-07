@@ -17,6 +17,8 @@ import StudentProfile from "./pages/StudentProfile";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import VerifyEmail from "./pages/VerifyEmail";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import TeamProfile from "./pages/TeamProfile";
 import CreateTeam from "./pages/CreateTeam";
 import MyTeam from "./pages/MyTeam";
@@ -37,6 +39,8 @@ function RouteTitle() {
     else if (path === "/login") title = "Sign In";
     else if (path === "/register") title = "Create Account";
     else if (path === "/verify-email") title = "Email Verification";
+    else if (path === "/forgot-password") title = "Reset Password";
+    else if (path === "/reset-password") title = "Set New Password";
     else if (path === "/my-team") title = "My Team";
     else if (path === "/my-profile") title = "My Profile";
     else if (path === "/teams/create") title = "Create a Team";
@@ -68,6 +72,8 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Protected pages */}
         <Route

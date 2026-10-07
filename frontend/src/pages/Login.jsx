@@ -122,6 +122,15 @@ function Login() {
                 className="input-field"
               />
             </div>
+
+            <div className="text-right">
+              <Link
+                to="/forgot-password"
+                className="text-sm font-medium text-zinc-700 hover:text-zinc-900 hover:underline"
+              >
+                Forgot password?
+              </Link>
+            </div>
           </div>
 
           {location.state?.message && !error && (
