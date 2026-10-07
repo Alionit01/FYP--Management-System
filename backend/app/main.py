@@ -85,6 +85,11 @@ def root():
     return {"message": "FYP Finder API is running!"}
 
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
 @app.middleware("http")
 async def security_headers(request, call_next):
     response = await call_next(request)
