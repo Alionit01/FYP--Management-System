@@ -2,10 +2,30 @@ import { createContext, useContext, useState } from "react";
 
 const AuthContext = createContext();
 
+function isTokenExpired(token) {
+  try {
+    const payload = JSON.parse(
+      atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))
+    );
+    if (!payload.exp) return false;
+    return payload.exp * 1000 <= Date.now();
+  } catch {
+    return true;
+  }
+}
+
+function getValidToken() {
+  const token = localStorage.getItem("access_token");
+  if (token && isTokenExpired(token)) {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("student_id");
+    return null;
+  }
+  return token;
+}
+
 export function AuthProvider({ children }) {
-  const [isLoggedIn, setIsLoggedIn] = useState(
-    !!localStorage.getItem("access_token")
-  );
+  const [isLoggedIn, setIsLoggedIn] = useState(() => !!getValidToken());
 
   const login = (token, studentId) => {
     localStorage.setItem("access_token", token);

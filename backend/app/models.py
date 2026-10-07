@@ -58,7 +58,8 @@ class TeamMember(Base):
     team_id = Column(
         Integer,
         ForeignKey("teams.id", ondelete="CASCADE"),
-        nullable=False
+        nullable=False,
+        index=True
     )
 
     student_id = Column(
