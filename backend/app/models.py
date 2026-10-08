@@ -33,6 +33,14 @@ class Student(Base):
         Boolean, nullable=False, default=False
     )
     verification_token = Column(String, nullable=True)
+    # New accounts start incomplete; the startup migration backfills
+    # existing rows as TRUE (server_default), grandfathering them.
+    profile_completed = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="true",
+    )
 
 class PendingRegistration(Base):
     __tablename__ = "pending_registrations"

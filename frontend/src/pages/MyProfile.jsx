@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import API_URL from "../api";
+import { useAuth } from "../context/AuthContext";
+import { isProfileComplete } from "../profile";
 
 function MyProfile() {
   const [profile, setProfile] = useState(null);
   const [form, setForm] = useState(null);
+  const { setProfileComplete } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -47,6 +50,9 @@ function MyProfile() {
           interests: data.interests || "",
           fyp_status: data.fyp_status || "",
         });
+
+        // A profile still being set up starts in edit mode.
+        if (!isProfileComplete(data)) setEditing(true);
 
         setLoading(false);
       })
@@ -99,6 +105,19 @@ function MyProfile() {
     setMessage("");
     setError("");
 
+    // Setup mode only: do not let an incomplete save succeed.
+    if (!isProfileComplete(profile)) {
+      const missing = [];
+      if (!form.profile_picture) missing.push("a profile photo");
+      if (!form.skills || !form.skills.trim()) missing.push("your skills");
+      if (!form.fyp_status) missing.push("your FYP status");
+      if (missing.length > 0) {
+        setError(`Please add ${missing.join(", ")} before saving.`);
+        setSaving(false);
+        return;
+      }
+    }
+
     try {
       const response = await fetch(
         `${API_URL}/my-profile`,
@@ -144,6 +163,7 @@ function MyProfile() {
 
       setMessage("Profile updated successfully.");
       setEditing(false);
+      setProfileComplete(isProfileComplete(updated));
     } catch {
       setError("Could not connect to the server.");
     } finally {
@@ -209,6 +229,46 @@ function MyProfile() {
             This is how other students see you.
           </p>
         </div>
+
+        {!isProfileComplete(profile) && (
+          <section className="mb-6 border border-amber-200 bg-amber-50 rounded-2xl p-5 sm:p-6">
+            <h2 className="text-lg font-semibold text-amber-900">
+              Complete your profile
+            </h2>
+
+            <p className="mt-1 text-sm text-amber-800">
+              Other students need these details to find and trust you.
+              All items are required before you can create or join teams.
+            </p>
+
+            <ul className="mt-3 space-y-1.5 text-sm">
+              {[
+                {
+                  label: "Profile photo",
+                  done: Boolean(profile.profile_picture),
+                },
+                {
+                  label: "Skills",
+                  done: Boolean(profile.skills && profile.skills.trim()),
+                },
+                { label: "FYP status", done: Boolean(profile.fyp_status) },
+              ].map((item) => (
+                <li
+                  key={item.label}
+                  className={
+                    item.done ? "text-green-700" : "text-amber-900 font-medium"
+                  }
+                >
+                  {item.done ? "✓" : "○"} {item.label}
+                </li>
+              ))}
+            </ul>
+
+            <p className="mt-3 text-xs text-amber-700">
+              Bio and interests are optional.
+            </p>
+          </section>
+        )}
 
         <section className="card p-5 sm:p-8">
           {/* Header */}
@@ -386,6 +446,46 @@ function MyProfile() {
           find you.
         </p>
       </div>
+
+      {!isProfileComplete(profile) && (
+        <section className="mb-6 border border-amber-200 bg-amber-50 rounded-2xl p-5 sm:p-6">
+          <h2 className="text-lg font-semibold text-amber-900">
+            Complete your profile
+          </h2>
+
+          <p className="mt-1 text-sm text-amber-800">
+            Other students need these details to find and trust you.
+            All items are required before you can create or join teams.
+          </p>
+
+          <ul className="mt-3 space-y-1.5 text-sm">
+            {[
+              {
+                label: "Profile photo",
+                done: Boolean(profile.profile_picture),
+              },
+              {
+                label: "Skills",
+                done: Boolean(profile.skills && profile.skills.trim()),
+              },
+              { label: "FYP status", done: Boolean(profile.fyp_status) },
+            ].map((item) => (
+              <li
+                key={item.label}
+                className={
+                  item.done ? "text-green-700" : "text-amber-900 font-medium"
+                }
+              >
+                {item.done ? "✓" : "○"} {item.label}
+              </li>
+            ))}
+          </ul>
+
+          <p className="mt-3 text-xs text-amber-700">
+            Bio and interests are optional.
+          </p>
+        </section>
+      )}
 
       <form
         onSubmit={handleSubmit}

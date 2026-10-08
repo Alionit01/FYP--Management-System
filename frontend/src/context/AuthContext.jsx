@@ -26,16 +26,20 @@ function getValidToken() {
 
 export function AuthProvider({ children }) {
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!getValidToken());
+  // null = not fetched yet; true/false once known
+  const [profileComplete, setProfileComplete] = useState(null);
 
   const login = (token, studentId) => {
     localStorage.setItem("access_token", token);
     localStorage.setItem("student_id", studentId);
+    setProfileComplete(null);
     setIsLoggedIn(true);
   };
 
   const logout = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("student_id");
+    setProfileComplete(null);
     setIsLoggedIn(false);
   };
 
@@ -45,6 +49,8 @@ export function AuthProvider({ children }) {
         isLoggedIn,
         login,
         logout,
+        profileComplete,
+        setProfileComplete,
       }}
     >
       {children}

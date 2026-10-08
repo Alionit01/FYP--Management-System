@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { isProfileComplete } from "../profile";
 import API_URL from "../api";
 
 function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, setProfileComplete } = useAuth();
 
   const [form, setForm] = useState({
     email: "",
@@ -51,6 +52,26 @@ function Login() {
       }
 
       login(data.access_token, data.student_id);
+
+      try {
+        const profileRes = await fetch(`${API_URL}/my-profile`, {
+          headers: { Authorization: `Bearer ${data.access_token}` },
+        });
+
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          const complete = isProfileComplete(profileData);
+          setProfileComplete(complete);
+
+          if (!complete) {
+            navigate("/my-profile", { replace: true });
+            return;
+          }
+        }
+      } catch {
+        // Network hiccup: fall through to the normal redirect.
+      }
+
       navigate(from, { replace: true });
     } catch {
       setError("Could not connect to the server.");

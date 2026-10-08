@@ -82,6 +82,10 @@ try:
             "UPDATE students SET email_verified = TRUE "
             "WHERE verification_token IS NULL"
         ))
+        conn.execute(text(
+            "ALTER TABLE students ADD COLUMN IF NOT EXISTS "
+            "profile_completed BOOLEAN NOT NULL DEFAULT TRUE"
+        ))
 except Exception:
     pass
 
@@ -547,6 +551,17 @@ def update_my_profile(
         student.interests = student_data.interests
         student.fyp_status = student_data.fyp_status
 
+        # One-way: flip to TRUE once the required fields are present.
+        # Never downgrade so grandfathered users are not locked out.
+        if (
+            not student.profile_completed
+            and student.profile_picture
+            and student.skills
+            and student.skills.strip()
+            and student.fyp_status
+        ):
+            student.profile_completed = True
+
         db.commit()
 
         profile = {
@@ -562,7 +577,8 @@ def update_my_profile(
             "whatsapp": student.whatsapp,
             "skills": student.skills,
             "interests": student.interests,
-            "fyp_status": student.fyp_status
+            "fyp_status": student.fyp_status,
+            "profile_completed": student.profile_completed
         }
 
         return {
@@ -589,7 +605,8 @@ def get_my_profile(
         "whatsapp": current_student.whatsapp,
         "skills": current_student.skills,
         "interests": current_student.interests,
-        "fyp_status": current_student.fyp_status
+        "fyp_status": current_student.fyp_status,
+        "profile_completed": current_student.profile_completed
     }
 
 
@@ -606,6 +623,12 @@ def create_team(
     db = database.SessionLocal()
 
     try:
+        if not current_student.profile_completed:
+            raise HTTPException(
+                status_code=403,
+                detail="Complete your profile before creating a team"
+            )
+
         # Student can only belong to one team
         existing_membership = db.query(models.TeamMember).filter(
             models.TeamMember.student_id == current_student.id

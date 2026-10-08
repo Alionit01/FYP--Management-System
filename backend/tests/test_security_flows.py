@@ -46,6 +46,15 @@ class SecurityFlowTests(unittest.TestCase):
         with SessionLocal() as db:
             return db.query(models.Student).filter_by(email=f"{local}@iqra.edu.pk").first()
 
+    def complete_profiles(self, *students):
+        with SessionLocal() as db:
+            for student in students:
+                db.query(models.Student).filter_by(id=student.id).update(
+                    {models.Student.profile_completed: True}
+                )
+            db.commit()
+            return [db.get(models.Student, student.id) for student in students]
+
     def test_verification_delivered_only_to_mailbox_then_login_and_replay(self):
         output = io.StringIO()
         with redirect_stdout(output):
@@ -150,6 +159,7 @@ class SecurityFlowTests(unittest.TestCase):
         owner = self.verified_student("owner")
         invitee = self.verified_student("invitee")
         stranger = self.verified_student("stranger")
+        owner, invitee, stranger = self.complete_profiles(owner, invitee, stranger)
         created = main.create_team(TeamCreate(
             name="Test team", department_preference="Any", spots_available=1
         ), current_student=owner)
@@ -176,6 +186,7 @@ class SecurityFlowTests(unittest.TestCase):
     def test_invitee_can_decline_without_becoming_member(self):
         owner = self.verified_student("owner")
         invitee = self.verified_student("invitee")
+        owner, invitee = self.complete_profiles(owner, invitee)
         team_id = main.create_team(TeamCreate(
             name="Test team", department_preference="Any", spots_available=1
         ), current_student=owner)["team_id"]
