@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import API_URL from "../api";
 
 function MyProfile() {
@@ -179,6 +180,13 @@ function MyProfile() {
           Keep your information up to date so other students can
           find you.
         </p>
+
+        <Link
+          to={`/students/${profile.id}`}
+          className="inline-flex items-center gap-1.5 mt-4 text-sm font-medium text-zinc-600 hover:text-zinc-900 underline-offset-4 hover:underline"
+        >
+          View how others see your profile →
+        </Link>
       </div>
 
       <form
@@ -314,12 +322,16 @@ function MyProfile() {
           </h2>
 
           <div className="mt-5 space-y-5">
-            {form.profile_picture && (
+            {form.profile_picture ? (
               <img
                 src={form.profile_picture}
                 alt="Current profile"
                 className="w-20 h-20 rounded-full object-cover ring-2 ring-zinc-100"
               />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-zinc-100 flex items-center justify-center text-2xl font-semibold text-zinc-700 ring-2 ring-zinc-100">
+                {form.name ? form.name.trim().charAt(0).toUpperCase() : "?"}
+              </div>
             )}
 
             <div>
@@ -388,6 +400,7 @@ function MyProfile() {
               />
             </div>
 
+            <div className="grid gap-5 sm:grid-cols-2">
             <div>
               <label
                 htmlFor="skills"
@@ -425,6 +438,7 @@ function MyProfile() {
                 className="input-field"
               />
             </div>
+            </div>
           </div>
         </section>
 
@@ -437,6 +451,7 @@ function MyProfile() {
           </h2>
 
           <div className="mt-5 space-y-5">
+            <div className="grid gap-5 sm:grid-cols-2">
             <div>
               <label
                 htmlFor="github"
@@ -473,6 +488,7 @@ function MyProfile() {
                 placeholder="https://linkedin.com/in/username"
                 className="input-field"
               />
+            </div>
             </div>
 
             <div>
