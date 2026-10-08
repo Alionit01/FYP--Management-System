@@ -13,6 +13,15 @@ def _validate_url(value: Optional[str]) -> Optional[str]:
     return value
 
 
+def _validate_picture(value: Optional[str]) -> Optional[str]:
+    if value is None or value == "":
+        return value
+    lowered = value.strip().lower()
+    if lowered.startswith("data:image/"):
+        return value
+    return _validate_url(value)
+
+
 
 
 MAX_TEAM_MEMBERS = 4
@@ -46,10 +55,15 @@ class StudentCreate(BaseModel):
     fyp_status: Optional[str] = None
 
 
-    @field_validator("github", "linkedin", "profile_picture")
+    @field_validator("github", "linkedin")
     @classmethod
     def _check_urls(cls, v):
         return _validate_url(v)
+
+    @field_validator("profile_picture")
+    @classmethod
+    def _check_picture(cls, v):
+        return _validate_picture(v)
 
 
 class TeamCreate(BaseModel):
@@ -125,10 +139,15 @@ class StudentUpdate(BaseModel):
     fyp_status: Optional[str] = None
 
 
-    @field_validator("github", "linkedin", "profile_picture")
+    @field_validator("github", "linkedin")
     @classmethod
     def _check_urls(cls, v):
         return _validate_url(v)
+
+    @field_validator("profile_picture")
+    @classmethod
+    def _check_picture(cls, v):
+        return _validate_picture(v)
 
 class TeamUpdate(BaseModel):
     name: str = Field(min_length=2, max_length=100)

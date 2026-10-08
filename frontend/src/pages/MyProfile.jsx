@@ -114,7 +114,13 @@ function MyProfile() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.detail || "Could not update profile.");
+        setError(
+          typeof data.detail === "string"
+            ? data.detail
+            : Array.isArray(data.detail) && data.detail[0]?.msg
+              ? data.detail[0].msg
+              : "Could not update profile."
+        );
         return;
       }
 
