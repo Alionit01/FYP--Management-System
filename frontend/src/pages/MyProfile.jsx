@@ -11,6 +11,7 @@ function MyProfile() {
 
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [editing, setEditing] = useState(false);
 
   const token = localStorage.getItem("access_token");
 
@@ -142,6 +143,7 @@ function MyProfile() {
       });
 
       setMessage("Profile updated successfully.");
+      setEditing(false);
     } catch {
       setError("Could not connect to the server.");
     } finally {
@@ -171,6 +173,203 @@ function MyProfile() {
     );
   }
 
+  if (!editing) {
+    const skills = profile.skills
+      ? profile.skills
+          .split(",")
+          .map((skill) => skill.trim())
+          .filter(Boolean)
+      : [];
+
+    const interests = profile.interests
+      ? profile.interests
+          .split(",")
+          .map((interest) => interest.trim())
+          .filter(Boolean)
+      : [];
+
+    const links = [
+      { label: "GitHub", value: profile.github },
+      { label: "LinkedIn", value: profile.linkedin },
+      { label: "WhatsApp", value: profile.whatsapp, whatsapp: true },
+    ];
+
+    return (
+      <main className="page-container max-w-3xl">
+        <div className="mb-8">
+          <p className="eyebrow">
+            Account
+          </p>
+
+          <h1 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight">
+            My Profile
+          </h1>
+
+          <p className="mt-3 text-zinc-600 leading-relaxed">
+            This is how other students see you.
+          </p>
+        </div>
+
+        <section className="card p-5 sm:p-8">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-start gap-5">
+            {profile.profile_picture ? (
+              <img
+                src={profile.profile_picture}
+                alt={profile.name}
+                className="w-20 h-20 rounded-full object-cover shrink-0 ring-2 ring-zinc-100"
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-zinc-100 flex items-center justify-center text-2xl font-semibold text-zinc-700 shrink-0 ring-2 ring-zinc-100">
+                {profile.name
+                  ? profile.name.trim().charAt(0).toUpperCase()
+                  : "?"}
+              </div>
+            )}
+
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <h2 className="text-2xl font-bold tracking-tight text-zinc-900 break-words">
+                  {profile.name}
+                </h2>
+
+                {profile.fyp_status && (
+                  <span className="badge w-fit">
+                    {profile.fyp_status}
+                  </span>
+                )}
+              </div>
+
+              <p className="mt-2 text-sm font-medium text-zinc-700">
+                {profile.program}
+              </p>
+
+              <p className="mt-0.5 text-xs text-zinc-500">
+                {profile.university_id} · {profile.email}
+              </p>
+            </div>
+          </div>
+
+          {/* About */}
+          <div className="mt-7 pt-6 border-t border-zinc-100">
+            <p className="eyebrow">About</p>
+
+            <p className="mt-2 text-zinc-600 leading-relaxed">
+              {profile.bio || "No bio added yet."}
+            </p>
+          </div>
+
+          {/* Skills */}
+          {skills.length > 0 && (
+            <div className="mt-6">
+              <p className="eyebrow">Skills</p>
+
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {skills.map((skill, index) => (
+                  <span key={index} className="tag !text-sm !px-3 !py-1.5">
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Interests */}
+          {interests.length > 0 && (
+            <div className="mt-6">
+              <p className="eyebrow">Interests</p>
+
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {interests.map((interest, index) => (
+                  <span key={index} className="tag !text-sm !px-3 !py-1.5">
+                    {interest}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Links & contact */}
+          <div className="mt-7 pt-6 border-t border-zinc-100">
+            <p className="eyebrow">Links & Contact</p>
+
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {links.map(({ label, value, whatsapp }) => (
+                <div
+                  key={label}
+                  className="border border-zinc-200 rounded-xl p-3.5"
+                >
+                  <span className="text-xs font-medium text-zinc-500 block">
+                    {label}
+                  </span>
+
+                  {value ? (
+                    whatsapp ? (
+                      <span className="mt-1 block text-sm font-medium text-zinc-900 break-all">
+                        {value}
+                      </span>
+                    ) : (
+                      <a
+                        href={value}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 block text-sm font-medium text-zinc-900 break-all hover:underline"
+                      >
+                        {value}
+                      </a>
+                    )
+                  ) : (
+                    <span className="mt-1 block text-sm text-zinc-400">
+                      Not shared
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {message && (
+          <div
+            role="status"
+            className="mt-6 border border-green-200 bg-green-50 text-green-700 rounded-lg px-4 py-3 text-sm"
+          >
+            {message}
+          </div>
+        )}
+
+        {error && (
+          <div
+            role="alert"
+            className="mt-6 border border-red-200 bg-red-50 text-red-700 rounded-lg px-4 py-3 text-sm"
+          >
+            {error}
+          </div>
+        )}
+
+        <div className="mt-6 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
+          <Link
+            to={`/students/${profile.id}`}
+            className="secondary-button"
+          >
+            View public profile
+          </Link>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMessage("");
+              setEditing(true);
+            }}
+            className="primary-button !px-6 !py-3"
+          >
+            Edit Profile
+          </button>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="page-container max-w-3xl">
       <div className="mb-8">
@@ -186,13 +385,6 @@ function MyProfile() {
           Keep your information up to date so other students can
           find you.
         </p>
-
-        <Link
-          to={`/students/${profile.id}`}
-          className="inline-flex items-center gap-1.5 mt-4 text-sm font-medium text-zinc-600 hover:text-zinc-900 underline-offset-4 hover:underline"
-        >
-          View how others see your profile →
-        </Link>
       </div>
 
       <form
@@ -512,7 +704,30 @@ function MyProfile() {
           </div>
         )}
 
-        <div className="mt-8 pt-6 border-t border-zinc-100 flex justify-end">
+        <div className="mt-8 pt-6 border-t border-zinc-100 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setForm({
+                name: profile.name || "",
+                program: profile.program || "",
+                profile_picture: profile.profile_picture || "",
+                bio: profile.bio || "",
+                github: profile.github || "",
+                linkedin: profile.linkedin || "",
+                whatsapp: profile.whatsapp || "",
+                skills: profile.skills || "",
+                interests: profile.interests || "",
+                fyp_status: profile.fyp_status || "",
+              });
+              setError("");
+              setEditing(false);
+            }}
+            className="secondary-button"
+          >
+            Cancel
+          </button>
+
           <button
             type="submit"
             disabled={saving}
