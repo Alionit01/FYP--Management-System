@@ -342,36 +342,10 @@ function MyProfile() {
 
             <div>
               <label
-                htmlFor="profile_picture"
-                className="block text-sm font-medium text-zinc-700 mb-2"
-              >
-                Profile Picture URL
-              </label>
-
-              <input
-                id="profile_picture"
-                type="url"
-                name="profile_picture"
-                value={form.profile_picture.startsWith("data:") ? "" : form.profile_picture}
-                onChange={handleChange}
-                placeholder="https://..."
-                className="input-field"
-              />
-
-              {form.profile_picture.startsWith("data:") && (
-                <p className="text-xs text-zinc-500 mt-2">
-                  A picture was loaded from your device. Saving will keep it.
-                  Type a URL above to replace it.
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label
                 htmlFor="profile_picture_upload"
                 className="block text-sm font-medium text-zinc-700 mb-2"
               >
-                Or upload a picture
+                Profile picture
               </label>
 
               <input
@@ -383,7 +357,8 @@ function MyProfile() {
               />
 
               <p className="text-xs text-zinc-500 mt-2">
-                An uploaded image replaces the URL until you save the profile.
+                Pick an image from your device (gallery, camera, or
+                downloads). It appears in your profile after saving.
               </p>
             </div>
 
