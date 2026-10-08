@@ -17,6 +17,11 @@
   -webkit-font-smoothing: antialiased;
 }
 
+main:focus,
+h1:focus {
+  outline: none;
+}
+
 * {
   box-sizing: border-box;
 }

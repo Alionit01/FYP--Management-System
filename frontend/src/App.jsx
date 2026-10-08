@@ -26,6 +26,41 @@ import MyProfile from "./pages/MyProfile";
 import EditTeam from "./pages/EditTeam";
 import NotFound from "./pages/NotFound";
 
+function RouteFocus() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const main = document.querySelector("main");
+    if (!main) return;
+
+    let headingFocused = false;
+
+    const focusHeading = () => {
+      const heading = main.querySelector("h1");
+      if (heading && !headingFocused) {
+        headingFocused = true;
+        heading.setAttribute("tabindex", "-1");
+        heading.focus({ preventScroll: true });
+      }
+    };
+
+    // Focus the new page's heading as soon as it exists (some pages
+    // render the h1 only after data loads, so watch for it).
+    focusHeading();
+
+    const observer = new MutationObserver(() => {
+      focusHeading();
+      if (headingFocused) observer.disconnect();
+    });
+
+    observer.observe(main, { childList: true, subtree: true });
+
+    return () => observer.disconnect();
+  }, [location.pathname]);
+
+  return null;
+}
+
 function RouteTitle() {
   const location = useLocation();
 
@@ -59,6 +94,7 @@ function App() {
   return (
     <BrowserRouter>
       <RouteTitle />
+      <RouteFocus />
       <Navbar />
 
       <ErrorBoundary>

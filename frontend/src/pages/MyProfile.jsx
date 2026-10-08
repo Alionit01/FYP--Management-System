@@ -61,6 +61,35 @@ function MyProfile() {
     });
   };
 
+  const handlePictureUpload = (e) => {
+    const file = e.target.files?.[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose an image file.");
+      return;
+    }
+
+    if (file.size > 1024 * 1024) {
+      setError("Image is too large. Please use a file under 1 MB.");
+      return;
+    }
+
+    setError("");
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      setForm((current) => ({
+        ...current,
+        profile_picture: reader.result,
+      }));
+    };
+
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -116,7 +145,9 @@ function MyProfile() {
   if (loading) {
     return (
       <main className="page-container max-w-3xl">
-        <p className="text-zinc-500">Loading your profile...</p>
+        <div className="card py-12 text-center text-zinc-500">
+          Loading your profile...
+        </div>
       </main>
     );
   }
@@ -216,6 +247,11 @@ function MyProfile() {
               </div>
             </div>
 
+            <p className="text-xs text-zinc-500 mt-2">
+              University ID and email are fixed at registration and cannot be
+              changed.
+            </p>
+
             <div>
               <label
                 htmlFor="program"
@@ -278,6 +314,14 @@ function MyProfile() {
           </h2>
 
           <div className="mt-5 space-y-5">
+            {form.profile_picture && (
+              <img
+                src={form.profile_picture}
+                alt="Current profile"
+                className="w-20 h-20 rounded-full object-cover ring-2 ring-zinc-100"
+              />
+            )}
+
             <div>
               <label
                 htmlFor="profile_picture"
@@ -290,11 +334,39 @@ function MyProfile() {
                 id="profile_picture"
                 type="url"
                 name="profile_picture"
-                value={form.profile_picture}
+                value={form.profile_picture.startsWith("data:") ? "" : form.profile_picture}
                 onChange={handleChange}
                 placeholder="https://..."
                 className="input-field"
               />
+
+              {form.profile_picture.startsWith("data:") && (
+                <p className="text-xs text-zinc-500 mt-2">
+                  A picture was loaded from your device. Saving will keep it.
+                  Type a URL above to replace it.
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label
+                htmlFor="profile_picture_upload"
+                className="block text-sm font-medium text-zinc-700 mb-2"
+              >
+                Or upload a picture
+              </label>
+
+              <input
+                id="profile_picture_upload"
+                type="file"
+                accept="image/*"
+                onChange={handlePictureUpload}
+                className="w-full text-sm text-zinc-600 file:mr-4 file:rounded-lg file:border file:border-zinc-300 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-zinc-800 hover:file:bg-zinc-50"
+              />
+
+              <p className="text-xs text-zinc-500 mt-2">
+                An uploaded image replaces the URL until you save the profile.
+              </p>
             </div>
 
             <div>

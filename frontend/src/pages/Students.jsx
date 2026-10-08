@@ -1,14 +1,21 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import API_URL from "../api";
 
 const PAGE_SIZE = 50;
 
 function Students() {
   const [students, setStudents] = useState([]);
-  const [search, setSearch] = useState("");
-  const [program, setProgram] = useState("All");
-  const [status, setStatus] = useState("All");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [search, setSearch] = useState(
+    () => searchParams.get("search") || ""
+  );
+  const [program, setProgram] = useState(
+    () => searchParams.get("program") || "All"
+  );
+  const [status, setStatus] = useState(
+    () => searchParams.get("status") || "All"
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [retryCount, setRetryCount] = useState(0);
@@ -113,6 +120,24 @@ function Students() {
     return matchesSearch && matchesProgram && matchesStatus;
   });
 
+  // Persist filters in the URL so results are shareable and Back works.
+  useEffect(() => {
+    const params = {};
+    if (search !== "") params.search = search;
+    if (program !== "All") params.program = program;
+    if (status !== "All") params.status = status;
+    setSearchParams(params, { replace: true });
+  }, [search, program, status, setSearchParams]);
+
+  const filtersActive =
+    search !== "" || program !== "All" || status !== "All";
+
+  const clearFilters = () => {
+    setSearch("");
+    setProgram("All");
+    setStatus("All");
+  };
+
   return (
     <main className="page-container">
 
@@ -203,6 +228,16 @@ function Students() {
           </div>
 
         </div>
+
+        {filtersActive && (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="mt-4 text-sm font-medium text-zinc-500 hover:text-zinc-900 hover:underline"
+          >
+            Clear filters
+          </button>
+        )}
       </section>
 
       {/* Results header */}

@@ -112,7 +112,9 @@ function StudentProfile() {
   if (loading) {
     return (
       <main className="page-container max-w-4xl">
-        <p className="text-zinc-500">Loading profile...</p>
+        <div className="card py-12 text-center text-zinc-500">
+          Loading profile...
+        </div>
       </main>
     );
   }

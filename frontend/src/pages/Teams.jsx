@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import API_URL from "../api";
 import { useAuth } from "../context/AuthContext";
 
@@ -8,8 +8,13 @@ const PAGE_SIZE = 50;
 function Teams() {
   const { isLoggedIn } = useAuth();
   const [teams, setTeams] = useState([]);
-  const [search, setSearch] = useState("");
-  const [program, setProgram] = useState("All");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [search, setSearch] = useState(
+    () => searchParams.get("search") || ""
+  );
+  const [program, setProgram] = useState(
+    () => searchParams.get("program") || "All"
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [retryCount, setRetryCount] = useState(0);
@@ -112,6 +117,21 @@ function Teams() {
     return matchesSearch && matchesProgram;
   });
 
+  // Persist filters in the URL so results are shareable and Back works.
+  useEffect(() => {
+    const params = {};
+    if (search !== "") params.search = search;
+    if (program !== "All") params.program = program;
+    setSearchParams(params, { replace: true });
+  }, [search, program, setSearchParams]);
+
+  const filtersActive = search !== "" || program !== "All";
+
+  const clearFilters = () => {
+    setSearch("");
+    setProgram("All");
+  };
+
   return (
     <main className="page-container">
       {/* Header */}
@@ -191,6 +211,16 @@ function Teams() {
             </select>
           </div>
         </div>
+
+        {filtersActive && (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="mt-4 text-sm font-medium text-zinc-500 hover:text-zinc-900 hover:underline"
+          >
+            Clear filters
+          </button>
+        )}
       </section>
 
       {/* Result count */}

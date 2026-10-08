@@ -137,7 +137,9 @@ function EditTeam() {
   if (loading) {
     return (
       <main className="page-container max-w-3xl">
-        <p className="text-zinc-500">Loading team...</p>
+        <div className="card py-12 text-center text-zinc-500">
+          Loading team...
+        </div>
       </main>
     );
   }

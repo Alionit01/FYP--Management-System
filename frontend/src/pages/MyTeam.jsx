@@ -340,9 +340,11 @@ function MyTeam() {
 
   if (loading) {
     return (
-      <div className="min-h-[calc(100vh-56px)] flex items-center justify-center">
-        <p className="text-zinc-500">Loading your team...</p>
-      </div>
+      <main className="page-container max-w-4xl">
+        <div className="card py-12 text-center text-zinc-500">
+          Loading your team...
+        </div>
+      </main>
     );
   }
 
