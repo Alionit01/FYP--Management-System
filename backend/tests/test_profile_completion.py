@@ -52,10 +52,10 @@ class ProfileCompletionTests(unittest.TestCase):
             ).first()
 
     def complete_profile_payload(self):
+        # A profile picture is optional; skills + status are required.
         return StudentUpdate(
             name="Test Student",
             program="BSCS",
-            profile_picture="data:image/png;base64,iVBORw0KGgo=",
             skills="Python, React",
             fyp_status="Looking for a team",
         )
@@ -81,6 +81,8 @@ class ProfileCompletionTests(unittest.TestCase):
         result = main.update_my_profile(
             self.complete_profile_payload(), current_student=student
         )
+        # No profile picture included: it is optional.
+        self.assertIsNone(result["profile"]["profile_picture"])
         self.assertTrue(result["profile"]["profile_completed"])
         with SessionLocal() as db:
             self.assertTrue(

@@ -108,7 +108,6 @@ function MyProfile() {
     // Setup mode only: do not let an incomplete save succeed.
     if (!isProfileComplete(profile)) {
       const missing = [];
-      if (!form.profile_picture) missing.push("a profile photo");
       if (!form.skills || !form.skills.trim()) missing.push("your skills");
       if (!form.fyp_status) missing.push("your FYP status");
       if (missing.length > 0) {
@@ -244,10 +243,6 @@ function MyProfile() {
             <ul className="mt-3 space-y-1.5 text-sm">
               {[
                 {
-                  label: "Profile photo",
-                  done: Boolean(profile.profile_picture),
-                },
-                {
                   label: "Skills",
                   done: Boolean(profile.skills && profile.skills.trim()),
                 },
@@ -265,7 +260,7 @@ function MyProfile() {
             </ul>
 
             <p className="mt-3 text-xs text-amber-700">
-              Bio and interests are optional.
+              A profile photo, bio and interests are optional.
             </p>
           </section>
         )}
@@ -461,10 +456,6 @@ function MyProfile() {
           <ul className="mt-3 space-y-1.5 text-sm">
             {[
               {
-                label: "Profile photo",
-                done: Boolean(profile.profile_picture),
-              },
-              {
                 label: "Skills",
                 done: Boolean(profile.skills && profile.skills.trim()),
               },
@@ -482,7 +473,7 @@ function MyProfile() {
           </ul>
 
           <p className="mt-3 text-xs text-amber-700">
-            Bio and interests are optional.
+            A profile photo, bio and interests are optional.
           </p>
         </section>
       )}

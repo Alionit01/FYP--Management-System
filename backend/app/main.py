@@ -555,7 +555,6 @@ def update_my_profile(
         # Never downgrade so grandfathered users are not locked out.
         if (
             not student.profile_completed
-            and student.profile_picture
             and student.skills
             and student.skills.strip()
             and student.fyp_status
