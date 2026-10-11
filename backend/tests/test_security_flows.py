@@ -144,6 +144,7 @@ class SecurityFlowTests(unittest.TestCase):
             "SMTP_USERNAME": "smtp-user", "SMTP_PASSWORD": "smtp-password",
             "SMTP_FROM": "no-reply@example.com",
             "FRONTEND_URL": "https://fyp.example.com",
+            "RESEND_API_KEY": "",
         }
         smtp = MagicMock()
         smtp.__enter__.return_value = smtp

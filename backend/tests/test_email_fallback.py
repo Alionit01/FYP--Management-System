@@ -18,7 +18,7 @@ from app.schemas import StudentCreate  # noqa: E402
 
 SMTP_OFF = {
     "SMTP_HOST": "", "SMTP_PORT": "", "SMTP_USERNAME": "",
-    "SMTP_PASSWORD": "", "SMTP_FROM": "",
+    "SMTP_PASSWORD": "", "SMTP_FROM": "", "RESEND_API_KEY": "",
 }
 
 

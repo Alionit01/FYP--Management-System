@@ -4,6 +4,10 @@ import ssl
 from email.message import EmailMessage
 from urllib.parse import urlencode
 
+# Resend's permitted test sender. It can ONLY deliver to the email
+# address of the Resend account owner; real student mail requires a
+# verified domain via EMAIL_FROM.
+RESEND_TEST_SENDER = "onboarding@resend.dev"
 
 _SMTP_REQUIRED = (
     "SMTP_HOST", "SMTP_PORT", "SMTP_USERNAME", "SMTP_PASSWORD", "SMTP_FROM",
@@ -23,14 +27,41 @@ def _frontend_url() -> str:
     return frontend_url
 
 
-def _deliver(address: str, subject: str, body: str) -> None:
+def _email_from() -> str:
+    # Configurable sender; defaults to Resend's test sender.
+    return (os.getenv("EMAIL_FROM") or "").strip() or RESEND_TEST_SENDER
+
+
+def _send_with_resend(address: str, subject: str, body: str) -> None:
+    api_key = (os.getenv("RESEND_API_KEY") or "").strip()
+    if not api_key:
+        raise RuntimeError("RESEND_API_KEY is not configured")
+
+    import resend
+
+    resend.api_key = api_key
+    try:
+        resend.Emails.send({
+            "from": _email_from(),
+            "to": [address],
+            "subject": subject,
+            "text": body,
+        })
+    except Exception:
+        # The provider error may echo request details; never surface it
+        # to callers (they turn it into a generic 503) and never log it
+        # here. No keys, tokens, or message bodies are written anywhere.
+        raise RuntimeError("Email provider rejected the message") from None
+
+
+def _send_with_smtp(address: str, subject: str, body: str) -> None:
     config = {key: os.getenv(key) for key in _SMTP_REQUIRED}
     if not all(config.values()):
         # Development fallback: print the link to the backend console so
-        # registration and password reset can continue without SMTP.
-        # Only allowed when the frontend runs on localhost; production
-        # (https FRONTEND_URL) still fails loudly instead of leaking
-        # tokens to a console.
+        # registration and password reset can continue without any email
+        # provider. Only allowed when the frontend runs on localhost;
+        # production (https FRONTEND_URL) still fails loudly instead of
+        # leaking tokens to a console.
         frontend_url = _frontend_url()
         if frontend_url.startswith("http://localhost:"):
             print(
@@ -58,6 +89,15 @@ def _deliver(address: str, subject: str, body: str) -> None:
             smtp.starttls(context=context)
             smtp.login(config["SMTP_USERNAME"], config["SMTP_PASSWORD"])
             smtp.send_message(message)
+
+
+def _deliver(address: str, subject: str, body: str) -> None:
+    # Transport order: Resend API (if RESEND_API_KEY is set), then the
+    # legacy SMTP path, then the localhost console fallback.
+    if (os.getenv("RESEND_API_KEY") or "").strip():
+        _send_with_resend(address, subject, body)
+        return
+    _send_with_smtp(address, subject, body)
 
 
 def send_verification_email(address: str, token: str) -> None:
