@@ -133,8 +133,15 @@ def create_student(student: StudentCreate):
     if not email.endswith("@" + university_domain.lower()):
         raise HTTPException(status_code=403, detail="University email required")
 
-    # The university email local part is the authoritative university ID.
-    if student.university_id.strip().lower() != email.rsplit("@", 1)[0]:
+    # The university ID must appear in the email local part: either the
+    # whole local part (67267@iqra.edu.pk) or after a dot
+    # (ali.67267@iqra.edu.pk). Comparison is case-insensitive.
+    local_part = email.rsplit("@", 1)[0]
+    university_id = student.university_id.strip().lower()
+    if not university_id or (
+        local_part != university_id
+        and not local_part.endswith("." + university_id)
+    ):
         raise HTTPException(
             status_code=400, detail="University ID must match your email address"
         )
