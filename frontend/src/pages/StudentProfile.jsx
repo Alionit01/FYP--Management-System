@@ -28,6 +28,16 @@ function StudentProfile() {
     const controller = new AbortController();
 
     const fetchStudent = async () => {
+      if (!token) {
+        navigate("/login", {
+          state: {
+            from: { pathname: `/students/${id}` },
+            message: "Sign in to view student profiles.",
+          },
+        });
+        return;
+      }
+
       try {
         setLoading(true);
         setError("");
@@ -36,6 +46,9 @@ function StudentProfile() {
           `${API_URL}/students/${id}`,
           {
             signal: controller.signal,
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           }
         );
 
@@ -69,7 +82,7 @@ function StudentProfile() {
     return () => {
       controller.abort();
     };
-  }, [id]);
+  }, [id, token, navigate]);
 
   const showContact = async () => {
     if (!token) {

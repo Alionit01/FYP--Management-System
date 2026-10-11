@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { RotateCw, Search, SlidersHorizontal, UserSearch } from "lucide-react";
 import API_URL from "../api";
 import Alert from "../components/Alert";
@@ -9,6 +9,8 @@ import Tags from "../components/Tags";
 const PAGE_SIZE = 50;
 
 function Students() {
+  const navigate = useNavigate();
+  const token = localStorage.getItem("access_token");
   const [students, setStudents] = useState([]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState(
@@ -32,9 +34,24 @@ function Students() {
       setLoading(true);
       setError("");
 
+      if (!token) {
+        navigate("/login", {
+          state: {
+            from: { pathname: "/students" },
+            message: "Sign in to view the student directory.",
+          },
+        });
+        return;
+      }
+
       try {
         const response = await fetch(
-          `${API_URL}/students?skip=0&limit=${PAGE_SIZE}`
+          `${API_URL}/students?skip=0&limit=${PAGE_SIZE}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
         );
         const data = await response.json();
 
@@ -72,14 +89,19 @@ function Students() {
     return () => {
       cancelled = true;
     };
-  }, [retryCount]);
+  }, [retryCount, token, navigate]);
 
   const loadMoreStudents = async () => {
     setError("");
 
     try {
       const response = await fetch(
-        `${API_URL}/students?skip=${students.length}&limit=${PAGE_SIZE}`
+        `${API_URL}/students?skip=${students.length}&limit=${PAGE_SIZE}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
       const data = await response.json();
 

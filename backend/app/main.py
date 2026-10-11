@@ -455,58 +455,51 @@ def _clamp_spots_available(db, team) -> None:
     )
 
 
+# The student directory: the only fields other students may see.
+# Private columns (password hash, email, whatsapp, email_verified,
+# verification_token, profile_completed) are never returned, and raw
+# ORM rows are never serialized to responses.
+DIRECTORY_FIELDS = (
+    "id",
+    "name",
+    "university_id",
+    "program",
+    "profile_picture",
+    "bio",
+    "github",
+    "linkedin",
+    "skills",
+    "interests",
+    "fyp_status",
+)
+
+
+def _directory_entry(student: models.Student) -> dict:
+    return {field: getattr(student, field) for field in DIRECTORY_FIELDS}
+
+
 @app.get("/students")
-def get_students(skip: int = 0, limit: int = 50):
+def get_students(
+    skip: int = 0,
+    limit: int = 50,
+    current_student=Depends(get_current_student),
+):
 
     limit = min(max(limit, 1), 100)
     skip = max(skip, 0)
 
     db = database.SessionLocal()
 
-    students = db.query(models.Student).offset(skip).limit(limit).all()
-
-    result = []
-
-
-    db.close()
-
-    return students
+    try:
+        students = db.query(models.Student).offset(skip).limit(limit).all()
+        return [_directory_entry(student) for student in students]
+    finally:
+        db.close()
 
 @app.get("/students/{student_id}")
-def get_student(student_id: int):
-
-    db = database.SessionLocal()
-
-    student = db.query(models.Student).filter(
-        models.Student.id == student_id
-    ).first()
-
-    db.close()
-
-    if not student:
-        raise HTTPException(
-            status_code=404,
-            detail="Student not found"
-        )
-
-    return {
-        "id": student.id,
-        "name": student.name,
-        "university_id": student.university_id,
-        "program": student.program,
-        "profile_picture": student.profile_picture,
-        "bio": student.bio,
-        "github": student.github,
-        "linkedin": student.linkedin,
-        "skills": student.skills,
-        "interests": student.interests,
-        "fyp_status": student.fyp_status
-    }
-
-@app.get("/students/{student_id}/contact")
-def get_student_contact(
+def get_student(
     student_id: int,
-    current_student=Depends(get_current_student)
+    current_student=Depends(get_current_student),
 ):
 
     db = database.SessionLocal()
@@ -523,10 +516,79 @@ def get_student_contact(
             detail="Student not found"
         )
 
-    return {
-        "email": student.email,
-        "whatsapp": student.whatsapp
+    return _directory_entry(student)
+
+def _may_view_contact(db: Session, requester_id: int, target_id: int) -> bool:
+    """Contact details (email, whatsapp) require an explicit relationship.
+
+    Allowed: the student themselves, a teammate (shared team), or a
+    pending team invitation in either direction. Being signed in is not
+    enough on its own.
+    """
+    if requester_id == target_id:
+        return True
+
+    requester_team_ids = {
+        row.team_id
+        for row in db.query(models.TeamMember).filter(
+            models.TeamMember.student_id == requester_id
+        )
     }
+    if requester_team_ids and db.query(models.TeamMember).filter(
+        models.TeamMember.student_id == target_id,
+        models.TeamMember.team_id.in_(requester_team_ids),
+    ).first():
+        return True
+
+    return (
+        db.query(models.TeamInvitation).filter(
+            (
+                (models.TeamInvitation.invited_by == requester_id)
+                & (models.TeamInvitation.student_id == target_id)
+            )
+            | (
+                (models.TeamInvitation.invited_by == target_id)
+                & (models.TeamInvitation.student_id == requester_id)
+            )
+        ).first()
+        is not None
+    )
+
+
+@app.get("/students/{student_id}/contact")
+def get_student_contact(
+    student_id: int,
+    current_student=Depends(get_current_student)
+):
+
+    db = database.SessionLocal()
+
+    try:
+        student = db.query(models.Student).filter(
+            models.Student.id == student_id
+        ).first()
+
+        if not student:
+            raise HTTPException(
+                status_code=404,
+                detail="Student not found"
+            )
+
+        if not _may_view_contact(db, current_student.id, student_id):
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    "Contact details are only shared with teammates and "
+                    "students who have exchanged team invitations."
+                ),
+            )
+
+        return {
+            "email": student.email,
+            "whatsapp": student.whatsapp
+        }
+    finally:
+        db.close()
 
 @app.put("/my-profile")
 def update_my_profile(
@@ -1127,6 +1189,29 @@ def get_my_team(
 
     return result
 
+def _may_view_team_contact(db: Session, team_id: int, requester_id: int) -> bool:
+    """Team contact information requires an explicit relationship.
+
+    Allowed: a current member of the team (the creator is always a
+    member) or the student targeted by a pending invitation to this
+    team (so they can decide whether to accept). Being signed in is
+    not enough on its own.
+    """
+    if db.query(models.TeamMember).filter(
+        models.TeamMember.team_id == team_id,
+        models.TeamMember.student_id == requester_id,
+    ).first():
+        return True
+
+    return (
+        db.query(models.TeamInvitation).filter(
+            models.TeamInvitation.team_id == team_id,
+            models.TeamInvitation.student_id == requester_id,
+        ).first()
+        is not None
+    )
+
+
 @app.get("/teams/{team_id}/contact")
 def get_team_contact(
     team_id: int,
@@ -1134,21 +1219,31 @@ def get_team_contact(
 ):
     db = database.SessionLocal()
 
-    team = db.query(models.Team).filter(
-        models.Team.id == team_id
-    ).first()
+    try:
+        team = db.query(models.Team).filter(
+            models.Team.id == team_id
+        ).first()
 
-    db.close()
+        if not team:
+            raise HTTPException(
+                status_code=404,
+                detail="Team not found"
+            )
 
-    if not team:
-        raise HTTPException(
-            status_code=404,
-            detail="Team not found"
-        )
+        if not _may_view_team_contact(db, team_id, current_student.id):
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    "Team contact information is only shared with team "
+                    "members and invited students."
+                ),
+            )
 
-    return {
-        "contact": team.contact
-    }
+        return {
+            "contact": team.contact
+        }
+    finally:
+        db.close()
 
 @app.post("/teams/{team_id}/invitations/{student_id}")
 def invite_team_member(
