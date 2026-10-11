@@ -45,7 +45,13 @@ function Register() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.detail || "Could not create your account.");
+        setError(
+          typeof data.detail === "string"
+            ? data.detail
+            : Array.isArray(data.detail) && data.detail[0]?.msg
+              ? data.detail[0].msg
+              : "Could not create your account."
+        );
         return;
       }
 

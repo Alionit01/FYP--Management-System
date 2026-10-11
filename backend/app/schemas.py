@@ -3,8 +3,12 @@ from typing import Optional
 
 
 def _validate_url(value: Optional[str]) -> Optional[str]:
-    if value is None or value == "":
+    if value is None:
         return value
+    if not value.strip():
+        # Optional link fields: blank or whitespace-only means "empty".
+        # Normalized to "" so it matches the omitted/empty-string path.
+        return ""
     lowered = value.strip().lower()
     if not (lowered.startswith("https://") or lowered.startswith("http://")):
         raise ValueError(
@@ -14,8 +18,10 @@ def _validate_url(value: Optional[str]) -> Optional[str]:
 
 
 def _validate_picture(value: Optional[str]) -> Optional[str]:
-    if value is None or value == "":
+    if value is None:
         return value
+    if not value.strip():
+        return ""
     lowered = value.strip().lower()
     if lowered.startswith("data:image/"):
         return value
