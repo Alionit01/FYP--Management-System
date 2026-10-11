@@ -35,9 +35,13 @@ function ProtectedRoute({ children }) {
     if (onProfilePage) return children;
     return (
       <main className="page-container max-w-3xl">
-        <div className="space-y-4">
-          <div className="h-8 w-40 bg-zinc-100 rounded animate-pulse" />
-          <div className="h-40 bg-zinc-100 rounded-xl animate-pulse" />
+        <p role="status" className="sr-only">
+          Loading…
+        </p>
+
+        <div className="space-y-4" aria-hidden="true">
+          <div className="skeleton h-8 w-40" />
+          <div className="skeleton h-40 w-full rounded-2xl" />
         </div>
       </main>
     );

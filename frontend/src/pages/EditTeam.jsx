@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Save, X } from "lucide-react";
 import API_URL from "../api";
+import Alert from "../components/Alert";
 
 const programs = [
   "BSCS",
@@ -137,8 +139,20 @@ function EditTeam() {
   if (loading) {
     return (
       <main className="page-container max-w-3xl">
-        <div className="card py-12 text-center text-zinc-500">
-          Loading team...
+        <p role="status" className="sr-only">
+          Loading team…
+        </p>
+
+        <div className="skeleton h-5 w-32" aria-hidden="true" />
+
+        <div className="card mt-6 p-5 sm:p-8" aria-hidden="true">
+          <div className="skeleton h-9 w-56" />
+          <div className="space-y-5 mt-8">
+            <div className="skeleton h-12 w-full" />
+            <div className="skeleton h-12 w-full" />
+            <div className="skeleton h-24 w-full" />
+            <div className="skeleton h-12 w-full" />
+          </div>
         </div>
       </main>
     );
@@ -147,30 +161,27 @@ function EditTeam() {
   return (
     <main className="page-container max-w-3xl">
       <button
+        type="button"
         onClick={() => navigate(`/teams/${id}`)}
-        className="text-sm font-medium text-zinc-600 hover:text-zinc-900 mb-6 transition-colors"
+        className="link-quiet inline-flex items-center gap-2"
       >
-        ← Back to Team
+        <ArrowLeft size={16} aria-hidden="true" />
+        <span>Back to Team</span>
       </button>
 
-      <div className="mb-8">
-        <p className="eyebrow">
-          Team
-        </p>
+      <div className="mb-8 mt-6 max-w-2xl">
+        <p className="eyebrow">Team</p>
 
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mt-2">
-          Edit Team
+        <h1 className="display mt-3 text-4xl sm:text-5xl">
+          Edit <em className="accent-italic">team.</em>
         </h1>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="card p-6 sm:p-8 space-y-6"
-      >
+      <form onSubmit={handleSubmit} className="card p-5 sm:p-8 space-y-6">
         <div>
           <label
             htmlFor="name"
-            className="block text-sm font-medium text-zinc-700 mb-2"
+            className="block text-sm font-medium text-ink-soft mb-2"
           >
             Team Name
           </label>
@@ -189,7 +200,7 @@ function EditTeam() {
         <div>
           <label
             htmlFor="project_title"
-            className="block text-sm font-medium text-zinc-700 mb-2"
+            className="block text-sm font-medium text-ink-soft mb-2"
           >
             Project Title
           </label>
@@ -207,7 +218,7 @@ function EditTeam() {
         <div>
           <label
             htmlFor="description"
-            className="block text-sm font-medium text-zinc-700 mb-2"
+            className="block text-sm font-medium text-ink-soft mb-2"
           >
             About Project
           </label>
@@ -226,7 +237,7 @@ function EditTeam() {
         <div>
           <label
             htmlFor="department_preference"
-            className="block text-sm font-medium text-zinc-700 mb-2"
+            className="block text-sm font-medium text-ink-soft mb-2"
           >
             Department Preference
           </label>
@@ -249,7 +260,7 @@ function EditTeam() {
         <div>
           <label
             htmlFor="spots_available"
-            className="block text-sm font-medium text-zinc-700 mb-2"
+            className="block text-sm font-medium text-ink-soft mb-2"
           >
             Additional Spots Available
           </label>
@@ -269,7 +280,7 @@ function EditTeam() {
         <div>
           <label
             htmlFor="skills_needed"
-            className="block text-sm font-medium text-zinc-700 mb-2"
+            className="block text-sm font-medium text-ink-soft mb-2"
           >
             Skills Needed
           </label>
@@ -287,7 +298,7 @@ function EditTeam() {
         <div>
           <label
             htmlFor="roles_needed"
-            className="block text-sm font-medium text-zinc-700 mb-2"
+            className="block text-sm font-medium text-ink-soft mb-2"
           >
             Roles Needed
           </label>
@@ -305,7 +316,7 @@ function EditTeam() {
         <div>
           <label
             htmlFor="contact"
-            className="block text-sm font-medium text-zinc-700 mb-2"
+            className="block text-sm font-medium text-ink-soft mb-2"
           >
             Contact
           </label>
@@ -320,11 +331,7 @@ function EditTeam() {
           />
         </div>
 
-        {error && (
-          <div role="alert" className="border border-red-200 bg-red-50 text-red-700 rounded-lg px-4 py-3 text-sm">
-            {error}
-          </div>
-        )}
+        {error && <Alert kind="error">{error}</Alert>}
 
         <div className="pt-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
           <button
@@ -332,6 +339,7 @@ function EditTeam() {
             onClick={() => navigate(`/teams/${id}`)}
             className="secondary-button"
           >
+            <X size={16} aria-hidden="true" />
             Cancel
           </button>
 
@@ -340,6 +348,7 @@ function EditTeam() {
             disabled={saving}
             className="primary-button !px-6 !py-3"
           >
+            <Save size={16} aria-hidden="true" />
             {saving ? "Saving..." : "Save Changes"}
           </button>
         </div>

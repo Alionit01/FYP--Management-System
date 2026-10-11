@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { RotateCw, Search, SlidersHorizontal, UserSearch } from "lucide-react";
 import API_URL from "../api";
+import Alert from "../components/Alert";
+import Avatar from "../components/Avatar";
+import Tags from "../components/Tags";
 
 const PAGE_SIZE = 50;
 
@@ -140,50 +144,63 @@ function Students() {
 
   return (
     <main className="page-container">
-
       {/* Header */}
-      <div className="mb-8">
-        <p className="eyebrow">
-          Directory
-        </p>
+      <div className="mb-8 max-w-2xl">
+        <p className="eyebrow">Directory</p>
 
-        <h1 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight">
-          Find Students
+        <h1 className="display mt-3 text-4xl sm:text-5xl">
+          Find <em className="accent-italic">students.</em>
         </h1>
 
-        <p className="mt-3 text-zinc-600 max-w-2xl leading-relaxed">
-          Browse students by program, skills, interests, and
-          FYP status.
+        <p className="mt-4 text-ink-soft leading-relaxed">
+          Browse students by program, skills, interests, and FYP
+          status.
         </p>
       </div>
 
       {/* Filters */}
-      <section className="card p-4 sm:p-5 mb-8">
+      <section
+        aria-label="Filter students"
+        className="card p-5 sm:p-6 mb-8"
+      >
+        <div className="mb-4 flex items-center gap-2 text-forest-800">
+          <SlidersHorizontal size={16} aria-hidden="true" />
+          <h2 className="text-xs font-semibold uppercase tracking-[0.16em]">
+            Filters
+          </h2>
+        </div>
 
         <div className="grid gap-4 md:grid-cols-3">
-
           <div className="md:col-span-1">
             <label
               htmlFor="search"
-              className="block text-sm font-medium text-zinc-700 mb-2"
+              className="block text-sm font-medium text-ink-soft mb-2"
             >
               Search
             </label>
 
-            <input
-              id="search"
-              type="text"
-              placeholder="Name, skills, interests..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="input-field"
-            />
+            <div className="relative">
+              <Search
+                size={16}
+                aria-hidden="true"
+                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted"
+              />
+
+              <input
+                id="search"
+                type="text"
+                placeholder="Name, skills, interests..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="input-field !pl-10"
+              />
+            </div>
           </div>
 
           <div>
             <label
               htmlFor="program"
-              className="block text-sm font-medium text-zinc-700 mb-2"
+              className="block text-sm font-medium text-ink-soft mb-2"
             >
               Program
             </label>
@@ -206,7 +223,7 @@ function Students() {
           <div>
             <label
               htmlFor="status"
-              className="block text-sm font-medium text-zinc-700 mb-2"
+              className="block text-sm font-medium text-ink-soft mb-2"
             >
               FYP Status
             </label>
@@ -226,14 +243,13 @@ function Students() {
               </option>
             </select>
           </div>
-
         </div>
 
         {filtersActive && (
           <button
             type="button"
             onClick={clearFilters}
-            className="mt-4 text-sm font-medium text-zinc-500 hover:text-zinc-900 hover:underline"
+            className="link-quiet mt-4"
           >
             Clear filters
           </button>
@@ -242,37 +258,66 @@ function Students() {
 
       {/* Results header */}
       {!loading && !error && (
-        <div className="flex items-baseline justify-between mb-4">
-          <p className="text-sm font-medium text-zinc-600">
+        <div className="flex items-baseline justify-between mb-5">
+          <p className="text-sm font-medium text-ink-soft">
             {filteredStudents.length}{" "}
             {filteredStudents.length === 1
               ? "student"
               : "students"}
+            {filtersActive && " match your filters"}
           </p>
         </div>
       )}
 
       {/* Loading */}
       {loading && (
-        <div className="card py-12 text-center text-zinc-500">
-          Loading students...
-        </div>
+        <>
+          <p role="status" className="sr-only">
+            Loading students…
+          </p>
+
+          <div
+            className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
+            aria-hidden="true"
+          >
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div key={index} className="card p-5 sm:p-6">
+                <div className="flex items-start gap-4">
+                  <div className="skeleton h-12 w-12 rounded-full" />
+
+                  <div className="flex-1 space-y-2">
+                    <div className="skeleton h-4 w-2/3" />
+                    <div className="skeleton h-3 w-1/3" />
+                  </div>
+                </div>
+
+                <div className="skeleton mt-5 h-6 w-2/5" />
+                <div className="skeleton mt-5 h-4 w-full" />
+                <div className="skeleton mt-2 h-4 w-4/5" />
+                <div className="skeleton mt-6 h-9 w-full rounded-full" />
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Error */}
       {!loading && error && (
-        <div role="alert" className="border border-red-200 bg-red-50 text-red-700 rounded-2xl p-6 text-center">
-          <h2 className="font-semibold text-lg">
+        <div className="card p-8 text-center">
+          <h2 className="display text-2xl text-forest-900">
             Could not load students
           </h2>
 
-          <p className="mt-2 text-sm">{error}</p>
+          <div className="mt-4 flex justify-center">
+            <Alert kind="error">{error}</Alert>
+          </div>
 
           <button
             type="button"
             onClick={() => setRetryCount((c) => c + 1)}
-            className="secondary-button mt-4"
+            className="secondary-button mt-5"
           >
+            <RotateCw size={16} aria-hidden="true" />
             Retry
           </button>
         </div>
@@ -280,95 +325,90 @@ function Students() {
 
       {/* Empty */}
       {!loading && !error && filteredStudents.length === 0 && (
-        <div className="border border-dashed border-zinc-300 rounded-2xl p-10 text-center">
-          <h2 className="font-semibold text-lg text-zinc-900">
+        <div className="empty-state">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-forest-100 text-forest-800">
+            <UserSearch size={22} aria-hidden="true" />
+          </div>
+
+          <h2 className="display mt-4 text-2xl text-forest-900">
             No students found
           </h2>
 
-          <p className="mt-2 text-zinc-500">
-            Try changing your search or filters.
+          <p className="mt-2 text-ink-soft">
+            {filtersActive
+              ? "Try changing your search or filters."
+              : "No students have joined yet."}
           </p>
+
+          {filtersActive && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="secondary-button mt-5"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       )}
 
       {/* Students */}
       {!loading && !error && filteredStudents.length > 0 && (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-
           {filteredStudents.map((student) => (
             <article
               key={student.id}
-              className="card p-5 flex flex-col transition-shadow hover:shadow-md"
+              className="card card-hover p-5 sm:p-6 flex flex-col h-full"
             >
-
               <div className="flex items-start gap-4">
+                <Avatar
+                  name={student.name}
+                  src={student.profile_picture}
+                />
 
-                {/* Avatar */}
-                {student.profile_picture ? (
-                  <img
-                    src={student.profile_picture}
-                    alt={student.name}
-                    className="w-12 h-12 rounded-full object-cover shrink-0 ring-1 ring-zinc-200"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center font-semibold text-zinc-700 shrink-0 ring-1 ring-zinc-200">
-                    {student.name
-                      .charAt(0)
-                      .toUpperCase()}
-                  </div>
-                )}
-
-                <div className="min-w-0">
-                  <h2 className="font-semibold text-base text-zinc-900 truncate">
+                <div className="min-w-0 flex-1">
+                  <h2 className="font-semibold text-base text-forest-900 break-words">
                     <Link
                       to={`/students/${student.id}`}
-                      className="hover:underline"
+                      className="transition-colors hover:text-forest-600"
                     >
                       {student.name}
                     </Link>
                   </h2>
 
-                  <p className="text-xs font-medium text-zinc-500 mt-0.5">
+                  <p className="text-xs font-medium text-ink-muted mt-0.5">
                     {student.program}
                   </p>
                 </div>
-
               </div>
 
               {student.fyp_status && (
-                <span className="badge self-start mt-4">
+                <span
+                  className={`badge mt-4 self-start ${
+                    student.fyp_status === "Looking for a team"
+                      ? "badge-open"
+                      : "badge-full"
+                  }`}
+                >
                   {student.fyp_status}
                 </span>
               )}
 
               {student.skills && (
-  <div className="mt-5">
-    <p className="eyebrow">
-      Skills
-    </p>
+                <div className="mt-5">
+                  <p className="eyebrow">Skills</p>
 
-    <div className="flex flex-wrap gap-1.5 mt-2">
-      {student.skills
-        .split(",")
-        .map((skill, index) => (
-          <span
-            key={index}
-            className="tag"
-          >
-            {skill.trim()}
-          </span>
-        ))}
-    </div>
-  </div>
-)}
+                  <div className="mt-2.5">
+                    <Tags items={student.skills} />
+                  </div>
+                </div>
+              )}
 
               {student.interests && (
                 <div className="mt-4">
-                  <p className="eyebrow">
-                    Interests
-                  </p>
+                  <p className="eyebrow">Interests</p>
 
-                  <p className="mt-1.5 text-sm text-zinc-600 leading-relaxed line-clamp-2">
+                  <p className="mt-2 text-sm text-ink-soft leading-relaxed line-clamp-2">
                     {student.interests}
                   </p>
                 </div>
@@ -379,12 +419,10 @@ function Students() {
                 to={`/students/${student.id}`}
                 className="secondary-button w-full mt-auto pt-2.5"
               >
-                View Profile
+                View profile
               </Link>
-
             </article>
           ))}
-
         </div>
       )}
 
@@ -400,7 +438,6 @@ function Students() {
           </button>
         </div>
       )}
-
     </main>
   );
 }

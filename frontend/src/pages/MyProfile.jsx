@@ -1,8 +1,75 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  BriefcaseBusiness,
+  Camera,
+  CheckCircle2,
+  Circle,
+  Code2,
+  Eye,
+  MessageCircle,
+  Pencil,
+  Save,
+  X,
+} from "lucide-react";
 import API_URL from "../api";
 import { useAuth } from "../context/AuthContext";
 import { isProfileComplete } from "../profile";
+import Alert from "../components/Alert";
+import Avatar from "../components/Avatar";
+import Tags from "../components/Tags";
+
+/* Checklist shown while a profile is still incomplete. Status is
+   conveyed by icon shape + text, not colour alone. */
+function SetupBanner({ profile }) {
+  const items = [
+    {
+      label: "Skills",
+      done: Boolean(profile.skills && profile.skills.trim()),
+    },
+    { label: "FYP status", done: Boolean(profile.fyp_status) },
+  ];
+
+  return (
+    <section className="mb-6 rounded-2xl border border-sun-300/60 bg-warning-50 p-5 sm:p-6">
+      <h2 className="display text-xl text-warning-700">
+        Complete your profile
+      </h2>
+
+      <p className="mt-1.5 text-sm text-warning-700/90">
+        Other students need these details to find and trust you. All
+        items are required before you can create or join teams.
+      </p>
+
+      <ul className="mt-4 space-y-2 text-sm">
+        {items.map((item) => (
+          <li
+            key={item.label}
+            className={`flex items-center gap-2 font-medium ${
+              item.done ? "text-success-700" : "text-warning-700"
+            }`}
+          >
+            {item.done ? (
+              <CheckCircle2 size={17} aria-hidden="true" />
+            ) : (
+              <Circle size={17} aria-hidden="true" />
+            )}
+            <span>
+              {item.label}
+              <span className="sr-only">
+                {item.done ? " added" : " still missing"}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      <p className="mt-4 text-xs text-warning-700/80">
+        A profile photo, bio and interests are optional.
+      </p>
+    </section>
+  );
+}
 
 function MyProfile() {
   const [profile, setProfile] = useState(null);
@@ -173,8 +240,25 @@ function MyProfile() {
   if (loading) {
     return (
       <main className="page-container max-w-3xl">
-        <div className="card py-12 text-center text-zinc-500">
-          Loading your profile...
+        <p role="status" className="sr-only">
+          Loading your profile…
+        </p>
+
+        <div className="skeleton h-3 w-24" aria-hidden="true" />
+        <div className="skeleton mt-4 h-9 w-56" aria-hidden="true" />
+
+        <div className="card mt-8 p-5 sm:p-8" aria-hidden="true">
+          <div className="flex flex-col sm:flex-row gap-5">
+            <div className="skeleton h-20 w-20 rounded-full" />
+
+            <div className="flex-1 space-y-3">
+              <div className="skeleton h-6 w-48" />
+              <div className="skeleton h-4 w-32" />
+            </div>
+          </div>
+
+          <div className="skeleton mt-8 h-4 w-full" />
+          <div className="skeleton mt-2 h-4 w-4/5" />
         </div>
       </main>
     );
@@ -183,11 +267,9 @@ function MyProfile() {
   if (!profile || !form) {
     return (
       <main className="page-container max-w-3xl">
-        <div role="alert" className="border border-red-200 bg-red-50 rounded-2xl p-6">
-          <p className="text-red-700">
-            {error || "Could not load your profile."}
-          </p>
-        </div>
+        <Alert kind="error">
+          {error || "Could not load your profile."}
+        </Alert>
       </main>
     );
   }
@@ -208,123 +290,81 @@ function MyProfile() {
       : [];
 
     const links = [
-      { label: "GitHub", value: profile.github },
-      { label: "LinkedIn", value: profile.linkedin },
-      { label: "WhatsApp", value: profile.whatsapp, whatsapp: true },
+      { label: "GitHub", value: profile.github, Icon: Code2 },
+      { label: "LinkedIn", value: profile.linkedin, Icon: BriefcaseBusiness },
+      { label: "WhatsApp", value: profile.whatsapp, Icon: MessageCircle, whatsapp: true },
     ];
 
     return (
       <main className="page-container max-w-3xl">
         <div className="mb-8">
-          <p className="eyebrow">
-            Account
-          </p>
+          <p className="eyebrow">Account</p>
 
-          <h1 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight">
-            My Profile
+          <h1 className="display mt-3 text-4xl sm:text-5xl">
+            My <em className="accent-italic">profile.</em>
           </h1>
 
-          <p className="mt-3 text-zinc-600 leading-relaxed">
+          <p className="mt-4 text-ink-soft leading-relaxed">
             This is how other students see you.
           </p>
         </div>
 
-        {!isProfileComplete(profile) && (
-          <section className="mb-6 border border-amber-200 bg-amber-50 rounded-2xl p-5 sm:p-6">
-            <h2 className="text-lg font-semibold text-amber-900">
-              Complete your profile
-            </h2>
-
-            <p className="mt-1 text-sm text-amber-800">
-              Other students need these details to find and trust you.
-              All items are required before you can create or join teams.
-            </p>
-
-            <ul className="mt-3 space-y-1.5 text-sm">
-              {[
-                {
-                  label: "Skills",
-                  done: Boolean(profile.skills && profile.skills.trim()),
-                },
-                { label: "FYP status", done: Boolean(profile.fyp_status) },
-              ].map((item) => (
-                <li
-                  key={item.label}
-                  className={
-                    item.done ? "text-green-700" : "text-amber-900 font-medium"
-                  }
-                >
-                  {item.done ? "✓" : "○"} {item.label}
-                </li>
-              ))}
-            </ul>
-
-            <p className="mt-3 text-xs text-amber-700">
-              A profile photo, bio and interests are optional.
-            </p>
-          </section>
-        )}
+        {!isProfileComplete(profile) && <SetupBanner profile={profile} />}
 
         <section className="card p-5 sm:p-8">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-start gap-5">
-            {profile.profile_picture ? (
-              <img
-                src={profile.profile_picture}
-                alt={profile.name}
-                className="w-20 h-20 rounded-full object-cover shrink-0 ring-2 ring-zinc-100"
-              />
-            ) : (
-              <div className="w-20 h-20 rounded-full bg-zinc-100 flex items-center justify-center text-2xl font-semibold text-zinc-700 shrink-0 ring-2 ring-zinc-100">
-                {profile.name
-                  ? profile.name.trim().charAt(0).toUpperCase()
-                  : "?"}
-              </div>
-            )}
+            <Avatar
+              name={profile.name}
+              src={profile.profile_picture}
+              size="lg"
+            />
 
             <div className="min-w-0 flex-1">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <h2 className="text-2xl font-bold tracking-tight text-zinc-900 break-words">
+                <h2 className="display text-2xl sm:text-3xl text-forest-900 break-words">
                   {profile.name}
                 </h2>
 
                 {profile.fyp_status && (
-                  <span className="badge w-fit">
+                  <span
+                    className={`badge w-fit ${
+                      profile.fyp_status === "Looking for a team"
+                        ? "badge-open"
+                        : "badge-full"
+                    }`}
+                  >
                     {profile.fyp_status}
                   </span>
                 )}
               </div>
 
-              <p className="mt-2 text-sm font-medium text-zinc-700">
+              <p className="mt-3 text-sm font-medium text-ink-soft">
                 {profile.program}
               </p>
 
-              <p className="mt-0.5 text-xs text-zinc-500">
+              <p className="mt-0.5 text-xs text-ink-muted break-all">
                 {profile.university_id} · {profile.email}
               </p>
             </div>
           </div>
 
           {/* About */}
-          <div className="mt-7 pt-6 border-t border-zinc-100">
+          <div className="mt-8 pt-6 divider">
             <p className="eyebrow">About</p>
 
-            <p className="mt-2 text-zinc-600 leading-relaxed">
+            <p className="mt-3 text-ink-soft leading-relaxed">
               {profile.bio || "No bio added yet."}
             </p>
           </div>
 
           {/* Skills */}
           {skills.length > 0 && (
-            <div className="mt-6">
+            <div className="mt-7">
               <p className="eyebrow">Skills</p>
 
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {skills.map((skill, index) => (
-                  <span key={index} className="tag !text-sm !px-3 !py-1.5">
-                    {skill}
-                  </span>
-                ))}
+              <div className="mt-3">
+                <Tags items={skills} size="lg" />
               </div>
             </div>
           )}
@@ -334,33 +374,27 @@ function MyProfile() {
             <div className="mt-6">
               <p className="eyebrow">Interests</p>
 
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {interests.map((interest, index) => (
-                  <span key={index} className="tag !text-sm !px-3 !py-1.5">
-                    {interest}
-                  </span>
-                ))}
+              <div className="mt-3">
+                <Tags items={interests} size="lg" />
               </div>
             </div>
           )}
 
           {/* Links & contact */}
-          <div className="mt-7 pt-6 border-t border-zinc-100">
+          <div className="mt-8 pt-6 divider">
             <p className="eyebrow">Links & Contact</p>
 
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              {links.map(({ label, value, whatsapp }) => (
-                <div
-                  key={label}
-                  className="border border-zinc-200 rounded-xl p-3.5"
-                >
-                  <span className="text-xs font-medium text-zinc-500 block">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {links.map(({ label, value, Icon, whatsapp }) => (
+                <div key={label} className="rounded-xl border border-forest-900/12 bg-cream-50 p-4">
+                  <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-forest-700">
+                    <Icon size={14} aria-hidden="true" />
                     {label}
                   </span>
 
                   {value ? (
                     whatsapp ? (
-                      <span className="mt-1 block text-sm font-medium text-zinc-900 break-all">
+                      <span className="mt-1.5 block text-sm font-medium text-ink break-all">
                         {value}
                       </span>
                     ) : (
@@ -368,13 +402,13 @@ function MyProfile() {
                         href={value}
                         target="_blank"
                         rel="noreferrer"
-                        className="mt-1 block text-sm font-medium text-zinc-900 break-all hover:underline"
+                        className="mt-1.5 block text-sm font-medium text-ink break-all underline-offset-4 hover:underline"
                       >
                         {value}
                       </a>
                     )
                   ) : (
-                    <span className="mt-1 block text-sm text-zinc-400">
+                    <span className="mt-1.5 block text-sm text-ink-muted">
                       Not shared
                     </span>
                   )}
@@ -385,20 +419,14 @@ function MyProfile() {
         </section>
 
         {message && (
-          <div
-            role="status"
-            className="mt-6 border border-green-200 bg-green-50 text-green-700 rounded-lg px-4 py-3 text-sm"
-          >
-            {message}
+          <div className="mt-6">
+            <Alert kind="success">{message}</Alert>
           </div>
         )}
 
         {error && (
-          <div
-            role="alert"
-            className="mt-6 border border-red-200 bg-red-50 text-red-700 rounded-lg px-4 py-3 text-sm"
-          >
-            {error}
+          <div className="mt-6">
+            <Alert kind="error">{error}</Alert>
           </div>
         )}
 
@@ -407,6 +435,7 @@ function MyProfile() {
             to={`/students/${profile.id}`}
             className="secondary-button"
           >
+            <Eye size={16} aria-hidden="true" />
             View public profile
           </Link>
 
@@ -418,6 +447,7 @@ function MyProfile() {
             }}
             className="primary-button !px-6 !py-3"
           >
+            <Pencil size={16} aria-hidden="true" />
             Edit Profile
           </button>
         </div>
@@ -428,63 +458,24 @@ function MyProfile() {
   return (
     <main className="page-container max-w-3xl">
       <div className="mb-8">
-        <p className="eyebrow">
-          Account
-        </p>
+        <p className="eyebrow">Account</p>
 
-        <h1 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight">
-          My Profile
+        <h1 className="display mt-3 text-4xl sm:text-5xl">
+          Edit your <em className="accent-italic">profile.</em>
         </h1>
 
-        <p className="mt-3 text-zinc-600 leading-relaxed">
-          Keep your information up to date so other students can
-          find you.
+        <p className="mt-4 text-ink-soft leading-relaxed">
+          Keep your information up to date so other students can find
+          you.
         </p>
       </div>
 
-      {!isProfileComplete(profile) && (
-        <section className="mb-6 border border-amber-200 bg-amber-50 rounded-2xl p-5 sm:p-6">
-          <h2 className="text-lg font-semibold text-amber-900">
-            Complete your profile
-          </h2>
+      {!isProfileComplete(profile) && <SetupBanner profile={profile} />}
 
-          <p className="mt-1 text-sm text-amber-800">
-            Other students need these details to find and trust you.
-            All items are required before you can create or join teams.
-          </p>
-
-          <ul className="mt-3 space-y-1.5 text-sm">
-            {[
-              {
-                label: "Skills",
-                done: Boolean(profile.skills && profile.skills.trim()),
-              },
-              { label: "FYP status", done: Boolean(profile.fyp_status) },
-            ].map((item) => (
-              <li
-                key={item.label}
-                className={
-                  item.done ? "text-green-700" : "text-amber-900 font-medium"
-                }
-              >
-                {item.done ? "✓" : "○"} {item.label}
-              </li>
-            ))}
-          </ul>
-
-          <p className="mt-3 text-xs text-amber-700">
-            A profile photo, bio and interests are optional.
-          </p>
-        </section>
-      )}
-
-      <form
-        onSubmit={handleSubmit}
-        className="card p-5 sm:p-8"
-      >
+      <form onSubmit={handleSubmit} className="card p-5 sm:p-8">
         {/* Basic information */}
         <section>
-          <h2 className="text-lg font-semibold text-zinc-900">
+          <h2 className="display text-xl text-forest-900">
             Basic Information
           </h2>
 
@@ -492,7 +483,7 @@ function MyProfile() {
             <div>
               <label
                 htmlFor="name"
-                className="block text-sm font-medium text-zinc-700 mb-2"
+                className="block text-sm font-medium text-ink-soft mb-2"
               >
                 Name
               </label>
@@ -512,7 +503,7 @@ function MyProfile() {
               <div>
                 <label
                   htmlFor="university_id"
-                  className="block text-sm font-medium text-zinc-700 mb-2"
+                  className="block text-sm font-medium text-ink-soft mb-2"
                 >
                   University ID
                 </label>
@@ -529,7 +520,7 @@ function MyProfile() {
               <div>
                 <label
                   htmlFor="email"
-                  className="block text-sm font-medium text-zinc-700 mb-2"
+                  className="block text-sm font-medium text-ink-soft mb-2"
                 >
                   University Email
                 </label>
@@ -544,15 +535,15 @@ function MyProfile() {
               </div>
             </div>
 
-            <p className="text-xs text-zinc-500 mt-2">
-              University ID and email are fixed at registration and cannot be
-              changed.
+            <p className="text-xs text-ink-muted">
+              University ID and email are fixed at registration and
+              cannot be changed.
             </p>
 
             <div>
               <label
                 htmlFor="program"
-                className="block text-sm font-medium text-zinc-700 mb-2"
+                className="block text-sm font-medium text-ink-soft mb-2"
               >
                 Program
               </label>
@@ -576,7 +567,7 @@ function MyProfile() {
             <div>
               <label
                 htmlFor="fyp_status"
-                className="block text-sm font-medium text-zinc-700 mb-2"
+                className="block text-sm font-medium text-ink-soft mb-2"
               >
                 FYP Status
               </label>
@@ -602,31 +593,25 @@ function MyProfile() {
           </div>
         </section>
 
-        <div className="my-8 border-t border-zinc-100" />
+        <div className="my-8 divider" />
 
         {/* About */}
         <section>
-          <h2 className="text-lg font-semibold text-zinc-900">
+          <h2 className="display text-xl text-forest-900">
             About You
           </h2>
 
           <div className="mt-5 space-y-5">
-            {form.profile_picture ? (
-              <img
-                src={form.profile_picture}
-                alt="Current profile"
-                className="w-20 h-20 rounded-full object-cover ring-2 ring-zinc-100"
-              />
-            ) : (
-              <div className="w-20 h-20 rounded-full bg-zinc-100 flex items-center justify-center text-2xl font-semibold text-zinc-700 ring-2 ring-zinc-100">
-                {form.name ? form.name.trim().charAt(0).toUpperCase() : "?"}
-              </div>
-            )}
+            <Avatar
+              name={form.name}
+              src={form.profile_picture}
+              size="lg"
+            />
 
             <div>
               <label
                 htmlFor="profile_picture_upload"
-                className="block text-sm font-medium text-zinc-700 mb-2"
+                className="block text-sm font-medium text-ink-soft mb-2"
               >
                 Profile picture
               </label>
@@ -636,10 +621,11 @@ function MyProfile() {
                 type="file"
                 accept="image/*"
                 onChange={handlePictureUpload}
-                className="w-full text-sm text-zinc-600 file:mr-4 file:rounded-lg file:border file:border-zinc-300 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-zinc-800 hover:file:bg-zinc-50"
+                className="input-file"
               />
 
-              <p className="text-xs text-zinc-500 mt-2">
+              <p className="text-xs text-ink-muted mt-2 inline-flex items-center gap-1.5">
+                <Camera size={13} aria-hidden="true" />
                 Pick an image from your device (gallery, camera, or
                 downloads). It appears in your profile after saving.
               </p>
@@ -648,7 +634,7 @@ function MyProfile() {
             <div>
               <label
                 htmlFor="bio"
-                className="block text-sm font-medium text-zinc-700 mb-2"
+                className="block text-sm font-medium text-ink-soft mb-2"
               >
                 Bio
               </label>
@@ -665,100 +651,100 @@ function MyProfile() {
             </div>
 
             <div className="grid gap-5 sm:grid-cols-2">
-            <div>
-              <label
-                htmlFor="skills"
-                className="block text-sm font-medium text-zinc-700 mb-2"
-              >
-                Skills
-              </label>
+              <div>
+                <label
+                  htmlFor="skills"
+                  className="block text-sm font-medium text-ink-soft mb-2"
+                >
+                  Skills
+                </label>
 
-              <input
-                id="skills"
-                type="text"
-                name="skills"
-                value={form.skills}
-                onChange={handleChange}
-                placeholder="e.g. Python, React, SQL, UI/UX"
-                className="input-field"
-              />
-            </div>
+                <input
+                  id="skills"
+                  type="text"
+                  name="skills"
+                  value={form.skills}
+                  onChange={handleChange}
+                  placeholder="e.g. Python, React, SQL, UI/UX"
+                  className="input-field"
+                />
+              </div>
 
-            <div>
-              <label
-                htmlFor="interests"
-                className="block text-sm font-medium text-zinc-700 mb-2"
-              >
-                Interests
-              </label>
+              <div>
+                <label
+                  htmlFor="interests"
+                  className="block text-sm font-medium text-ink-soft mb-2"
+                >
+                  Interests
+                </label>
 
-              <input
-                id="interests"
-                type="text"
-                name="interests"
-                value={form.interests}
-                onChange={handleChange}
-                placeholder="e.g. AI, Web Development, Cybersecurity"
-                className="input-field"
-              />
-            </div>
+                <input
+                  id="interests"
+                  type="text"
+                  name="interests"
+                  value={form.interests}
+                  onChange={handleChange}
+                  placeholder="e.g. AI, Web Development, Cybersecurity"
+                  className="input-field"
+                />
+              </div>
             </div>
           </div>
         </section>
 
-        <div className="my-8 border-t border-zinc-100" />
+        <div className="my-8 divider" />
 
         {/* Links */}
         <section>
-          <h2 className="text-lg font-semibold text-zinc-900">
+          <h2 className="display text-xl text-forest-900">
             Links & Contact
           </h2>
 
           <div className="mt-5 space-y-5">
             <div className="grid gap-5 sm:grid-cols-2">
-            <div>
-              <label
-                htmlFor="github"
-                className="block text-sm font-medium text-zinc-700 mb-2"
-              >
-                GitHub
-              </label>
+              <div>
+                <label
+                  htmlFor="github"
+                  className="block text-sm font-medium text-ink-soft mb-2"
+                >
+                  GitHub
+                </label>
 
-              <input
-                id="github"
-                type="url"
-                name="github"
-                value={form.github}
-                onChange={handleChange}
-                placeholder="https://github.com/username"
-                className="input-field"
-              />
-            </div>
+                <input
+                  id="github"
+                  type="url"
+                  name="github"
+                  value={form.github}
+                  onChange={handleChange}
+                  placeholder="https://github.com/username"
+                  className="input-field"
+                />
+              </div>
 
-            <div>
-              <label
-                htmlFor="linkedin"
-                className="block text-sm font-medium text-zinc-700 mb-2"
-              >
-                LinkedIn
-              </label>
+              <div>
+                <label
+                  htmlFor="linkedin"
+                  className="block text-sm font-medium text-ink-soft mb-2"
+                >
+                  LinkedIn
+                </label>
 
-              <input
-                id="linkedin"
-                type="url"
-                name="linkedin"
-                value={form.linkedin}
-                onChange={handleChange}
-                placeholder="https://linkedin.com/in/username"
-                className="input-field"
-              />
-            </div>
+                <input
+                  id="linkedin"
+                  type="url"
+                  name="linkedin"
+                  value={form.linkedin}
+                  onChange={handleChange}
+                  placeholder="https://linkedin.com/in/username"
+                  className="input-field"
+                />
+              </div>
             </div>
 
             <div>
               <label
                 htmlFor="whatsapp"
-                className="block text-sm font-medium text-zinc-700 mb-2"
+                className="block text-sm font-medium text-ink-soft mb-2"
               >
                 WhatsApp
               </label>
@@ -773,7 +759,7 @@ function MyProfile() {
                 className="input-field"
               />
 
-              <p className="text-xs text-zinc-500 mt-2">
+              <p className="text-xs text-ink-muted mt-2">
                 Your contact details are not shown publicly.
               </p>
             </div>
@@ -781,21 +767,18 @@ function MyProfile() {
         </section>
 
         {error && (
-          <div role="alert" className="mt-7 border border-red-200 bg-red-50 text-red-700 rounded-lg px-4 py-3 text-sm">
-            {error}
+          <div className="mt-7">
+            <Alert kind="error">{error}</Alert>
           </div>
         )}
 
         {message && (
-          <div
-            role="status"
-            className="mt-7 border border-green-200 bg-green-50 text-green-700 rounded-lg px-4 py-3 text-sm"
-          >
-            {message}
+          <div className="mt-7">
+            <Alert kind="success">{message}</Alert>
           </div>
         )}
 
-        <div className="mt-8 pt-6 border-t border-zinc-100 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3">
+        <div className="mt-8 pt-6 divider flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3">
           <button
             type="button"
             onClick={() => {
@@ -816,6 +799,7 @@ function MyProfile() {
             }}
             className="secondary-button"
           >
+            <X size={16} aria-hidden="true" />
             Cancel
           </button>
 
@@ -824,6 +808,7 @@ function MyProfile() {
             disabled={saving}
             className="primary-button w-full sm:w-auto !px-6 !py-3"
           >
+            <Save size={16} aria-hidden="true" />
             {saving ? "Saving..." : "Save Changes"}
           </button>
         </div>

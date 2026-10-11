@@ -1,8 +1,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, UserPlus, UserMinus } from "lucide-react";
+import {
+  ArrowLeft,
+  Bell,
+  Trash2,
+  UserMinus,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import API_URL from "../api";
+import Alert from "../components/Alert";
+import Avatar from "../components/Avatar";
 import ConfirmDialog from "../components/ConfirmDialog";
+import Tags from "../components/Tags";
 
 const MAX_TEAM_MEMBERS = 4;
 
@@ -302,47 +312,63 @@ function MyTeam() {
   // team, so this block is rendered in both branches below.
   const invitationsSection =
     invitations.length > 0 ? (
-      <div className="card p-6 mt-6">
-        <h2 className="text-lg font-semibold">Team invitations</h2>
+      <section className="card p-5 sm:p-7 mt-6">
+        <div className="flex items-center gap-2">
+          <Bell size={18} aria-hidden="true" className="text-forest-700" />
 
-        {error && (
-          <p role="alert" className="text-red-700 mt-3">
-            {error}
-          </p>
-        )}
+          <h2 className="display text-xl text-forest-900">
+            Team invitations
+          </h2>
+        </div>
 
-        {invitations.map((invitation) => (
-          <div
-            key={invitation.id}
-            className="flex items-center justify-between gap-3 mt-4 flex-wrap"
-          >
-            <span>{invitation.team_name}</span>
+        <ul className="mt-5 space-y-3">
+          {invitations.map((invitation) => (
+            <li
+              key={invitation.id}
+              className="flex items-center justify-between gap-3 flex-wrap rounded-xl border border-forest-900/12 bg-cream-50 p-4"
+            >
+              <span className="font-medium text-forest-900">
+                {invitation.team_name}
+              </span>
 
-            <div className="flex gap-2">
-              <button
-                className="primary-button"
-                onClick={() => respondToInvitation(invitation.id, true)}
-              >
-                Accept
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="primary-button !py-2"
+                  onClick={() => respondToInvitation(invitation.id, true)}
+                >
+                  Accept
+                </button>
 
-              <button
-                className="secondary-button"
-                onClick={() => respondToInvitation(invitation.id, false)}
-              >
-                Decline
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+                <button
+                  type="button"
+                  className="secondary-button !py-2"
+                  onClick={() => respondToInvitation(invitation.id, false)}
+                >
+                  Decline
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
     ) : null;
 
   if (loading) {
     return (
       <main className="page-container max-w-4xl">
-        <div className="card py-12 text-center text-zinc-500">
-          Loading your team...
+        <p role="status" className="sr-only">
+          Loading your team…
+        </p>
+
+        <div className="skeleton h-5 w-32" aria-hidden="true" />
+
+        <div className="card mt-6 p-5 sm:p-7" aria-hidden="true">
+          <div className="skeleton h-3 w-20" />
+          <div className="skeleton mt-3 h-8 w-64" />
+          <div className="skeleton mt-6 h-4 w-full" />
+          <div className="skeleton mt-2 h-4 w-4/5" />
+          <div className="skeleton mt-8 h-24 w-full" />
         </div>
       </main>
     );
@@ -352,16 +378,15 @@ function MyTeam() {
     return (
       <div className="page-container max-w-4xl">
         <button
+          type="button"
           onClick={() => navigate("/teams")}
-          className="flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 mb-6 transition-colors"
+          className="link-quiet inline-flex items-center gap-2 mb-6"
         >
-          <ArrowLeft size={18} />
+          <ArrowLeft size={16} aria-hidden="true" />
           Back to Teams
         </button>
 
-        <div role="alert" className="border border-red-200 bg-red-50 text-red-700 rounded-xl p-4">
-          {error}
-        </div>
+        <Alert kind="error">{error}</Alert>
       </div>
     );
   }
@@ -370,24 +395,30 @@ function MyTeam() {
     return (
       <div className="page-container max-w-4xl">
         <button
+          type="button"
           onClick={() => navigate("/teams")}
-          className="flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 mb-6 transition-colors"
+          className="link-quiet inline-flex items-center gap-2 mb-6"
         >
-          <ArrowLeft size={18} />
+          <ArrowLeft size={16} aria-hidden="true" />
           Back to Teams
         </button>
 
-        <div className="card p-8 text-center">
-          <h2 className="text-lg font-semibold text-zinc-900">
-            You are not in a team
-          </h2>
+        <div className="empty-state">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-forest-100 text-forest-800">
+            <Users size={22} aria-hidden="true" />
+          </div>
 
-          <p className="text-zinc-500 mt-2">
+          <h1 className="display mt-4 text-2xl text-forest-900">
+            You are not in a team
+          </h1>
+
+          <p className="mt-2 text-ink-soft">
             Join or create a team to get started.
           </p>
 
-          <div className="mt-5 flex flex-col sm:flex-row justify-center gap-3">
+          <div className="mt-6 flex flex-col sm:flex-row justify-center gap-3">
             <button
+              type="button"
               onClick={() => navigate("/teams")}
               className="secondary-button"
             >
@@ -395,13 +426,21 @@ function MyTeam() {
             </button>
 
             <button
+              type="button"
               onClick={() => navigate("/teams/create")}
               className="primary-button"
             >
+              <UserPlus size={16} aria-hidden="true" />
               Create a Team
             </button>
           </div>
         </div>
+
+        {error && (
+          <div className="mt-6">
+            <Alert kind="error">{error}</Alert>
+          </div>
+        )}
 
         {invitationsSection}
       </div>
@@ -412,28 +451,26 @@ function MyTeam() {
     <div className="page-container max-w-4xl">
       {/* Back */}
       <button
+        type="button"
         onClick={() => navigate("/teams")}
-        className="flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 mb-6 transition-colors"
+        className="link-quiet inline-flex items-center gap-2 mb-6"
       >
-        <ArrowLeft size={18} />
+        <ArrowLeft size={16} aria-hidden="true" />
         Back to Teams
       </button>
 
       {/* Team Header */}
-      <div className="card p-5 sm:p-7">
+      <div className="card p-5 sm:p-8">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-
           <div className="min-w-0">
-            <p className="eyebrow">
-              My Team
-            </p>
+            <p className="eyebrow">My Team</p>
 
-            <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-zinc-900 break-words">
+            <h1 className="display mt-2 text-3xl sm:text-4xl text-forest-900 break-words">
               {team.name}
             </h1>
 
             {team.project_title && (
-              <p className="text-zinc-600 mt-1 leading-snug">
+              <p className="text-ink-soft mt-2 leading-snug">
                 {team.project_title}
               </p>
             )}
@@ -441,7 +478,6 @@ function MyTeam() {
 
           {/* Owner actions + spots */}
           <div className="flex flex-wrap items-center gap-2 shrink-0">
-
             {isOwner && (
               <button
                 type="button"
@@ -452,77 +488,55 @@ function MyTeam() {
               </button>
             )}
 
-            <div className="badge !bg-zinc-900 !text-white !border-transparent !px-3 !py-1.5">
+            <span
+              className={`badge ${
+                team.spots_available > 0 ? "badge-open" : "badge-full"
+              }`}
+            >
               {team.spots_available > 0
                 ? `${team.spots_available} spot${team.spots_available === 1 ? "" : "s"} available`
                 : "Full"}
-            </div>
-
+            </span>
           </div>
         </div>
 
         {team.description && (
-          <p className="text-zinc-600 mt-5 leading-relaxed">
+          <p className="text-ink-soft mt-6 leading-relaxed whitespace-pre-line">
             {team.description}
           </p>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 pt-6 border-t border-zinc-100">
-
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-8 pt-6 divider">
           <div>
-            <p className="eyebrow">
-              Department Preference
-            </p>
-            <p className="text-sm font-medium text-zinc-900 mt-1.5">
+            <p className="eyebrow">Department Preference</p>
+            <p className="text-sm font-medium text-ink mt-2">
               {team.department_preference}
             </p>
           </div>
 
           {team.skills_needed && (
             <div>
-              <p className="eyebrow">
-                Skills Needed
-              </p>
+              <p className="eyebrow">Skills Needed</p>
 
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {team.skills_needed
-                  .split(",")
-                  .map((skill) => skill.trim())
-                  .filter(Boolean)
-                  .map((skill, index) => (
-                    <span key={index} className="tag">
-                      {skill}
-                    </span>
-                  ))}
+              <div className="mt-2.5">
+                <Tags items={team.skills_needed} />
               </div>
             </div>
           )}
 
           {team.roles_needed && (
             <div>
-              <p className="eyebrow">
-                Roles Needed
-              </p>
+              <p className="eyebrow">Roles Needed</p>
 
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {team.roles_needed
-                  .split(",")
-                  .map((role) => role.trim())
-                  .filter(Boolean)
-                  .map((role, index) => (
-                    <span key={index} className="tag">
-                      {role}
-                    </span>
-                  ))}
+              <div className="mt-2.5">
+                <Tags items={team.roles_needed} />
               </div>
             </div>
           )}
 
           {team.contact && (
             <div>
-              <p className="eyebrow">
-                Contact
-              </p>
+              <p className="eyebrow">Contact</p>
 
               {(() => {
                 const contact = team.contact.trim();
@@ -537,32 +551,31 @@ function MyTeam() {
                     href={href}
                     target={href.startsWith("http") ? "_blank" : undefined}
                     rel="noreferrer"
-                    className="text-sm font-medium text-zinc-900 mt-1.5 break-all hover:underline inline-block"
+                    className="text-sm font-medium text-ink mt-2 break-all underline-offset-4 hover:underline inline-block"
                   >
                     {team.contact}
                   </a>
                 ) : (
-                  <p className="text-sm font-medium text-zinc-900 mt-1.5 break-all">
+                  <p className="text-sm font-medium text-ink mt-2 break-all">
                     {team.contact}
                   </p>
                 );
               })()}
             </div>
           )}
-
         </div>
       </div>
 
       {/* Messages */}
       {message && (
-        <div role="status" className="mt-4 bg-green-50 border border-green-200 text-green-700 rounded-xl p-4 text-sm">
-          {message}
+        <div className="mt-5">
+          <Alert kind="success">{message}</Alert>
         </div>
       )}
 
       {error && (
-        <div role="alert" className="mt-4 bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm">
-          {error}
+        <div className="mt-5">
+          <Alert kind="error">{error}</Alert>
         </div>
       )}
 
@@ -570,48 +583,45 @@ function MyTeam() {
 
       {/* Members */}
       <div className="card p-5 sm:p-7 mt-6">
-
         <div className="flex items-baseline justify-between mb-5">
           <div>
-            <h2 className="text-lg font-semibold text-zinc-900">
+            <h2 className="display text-xl text-forest-900">
               Team Members
             </h2>
 
-            <p className="text-sm text-zinc-500 mt-0.5">
+            <p className="text-sm text-ink-muted mt-1">
               {members.length} member
               {members.length !== 1 ? "s" : ""}
             </p>
           </div>
         </div>
 
-        <div className="space-y-2.5">
+        <ul className="space-y-2.5">
           {members.map((member) => {
             const memberIsOwner =
               String(member.id) === String(team.created_by);
 
             return (
-              <div
+              <li
                 key={member.id}
-                className="flex items-center justify-between gap-3 border border-zinc-200 rounded-xl p-3.5"
+                className="flex items-center justify-between gap-3 rounded-xl border border-forest-900/12 bg-cream-50 p-3.5"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-full bg-zinc-100 flex items-center justify-center text-sm font-semibold text-zinc-700 shrink-0">
-                    {member.name.charAt(0).toUpperCase()}
-                  </div>
+                  <Avatar name={member.name} size="sm" />
 
                   <div className="min-w-0">
-                    <p className="font-medium text-zinc-900 truncate">
+                    <p className="font-medium text-forest-900 truncate">
                       {member.name}
                     </p>
 
                     {member.email && (
-                      <p className="text-sm text-zinc-500 truncate">
+                      <p className="text-sm text-ink-muted truncate">
                         {member.email}
                       </p>
                     )}
 
                     {memberIsOwner && (
-                      <span className="badge mt-1.5">
+                      <span className="badge badge-open mt-1.5">
                         Team Owner
                       </span>
                     )}
@@ -622,28 +632,26 @@ function MyTeam() {
                   <button
                     type="button"
                     onClick={() => requestRemoveConfirm(member)}
-                    className="p-2.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors shrink-0"
+                    className="p-2.5 rounded-full text-danger-700 hover:bg-danger-50 transition-colors shrink-0"
                     title="Remove member"
                     aria-label={`Remove ${member.name} from the team`}
                   >
                     <UserMinus size={18} />
                   </button>
                 )}
-              </div>
+              </li>
             );
           })}
-        </div>
+        </ul>
 
         {/* Add Member */}
         {isOwner && members.length < MAX_TEAM_MEMBERS && (
-          <div className="mt-6 pt-6 border-t border-zinc-100">
-
-            <h3 className="text-sm font-semibold text-zinc-900 mb-3">
+          <div className="mt-6 pt-6 divider">
+            <h3 className="text-sm font-semibold text-forest-900 mb-3">
               Invite Team Member
             </h3>
 
             <div className="flex flex-col sm:flex-row gap-3">
-
               <select
                 value={selectedStudent}
                 onChange={(e) => setSelectedStudent(e.target.value)}
@@ -667,18 +675,17 @@ function MyTeam() {
                 disabled={!selectedStudent}
                 className="primary-button !py-2.5 shrink-0"
               >
-                <UserPlus size={17} />
+                <UserPlus size={17} aria-hidden="true" />
                 Send Invitation
               </button>
-
             </div>
           </div>
         )}
 
         {/* Team full */}
         {isOwner && members.length >= MAX_TEAM_MEMBERS && (
-          <div className="mt-6 pt-6 border-t border-zinc-100">
-            <p className="text-sm text-zinc-500">
+          <div className="mt-6 pt-6 divider">
+            <p className="text-sm text-ink-muted">
               This team is full ({MAX_TEAM_MEMBERS} members maximum).
               Remove a member to add someone else.
             </p>
@@ -688,8 +695,8 @@ function MyTeam() {
 
       {/* Leave / Delete Team */}
       <div className="mt-6 flex flex-col sm:flex-row gap-3">
-
         <button
+          type="button"
           onClick={requestLeaveConfirm}
           className="danger-button w-full sm:w-auto"
         >
@@ -698,9 +705,11 @@ function MyTeam() {
 
         {isOwner && (
           <button
+            type="button"
             onClick={requestDeleteConfirm}
             className="danger-button w-full sm:w-auto"
           >
+            <Trash2 size={16} aria-hidden="true" />
             Delete Team
           </button>
         )}
@@ -715,7 +724,6 @@ function MyTeam() {
           onConfirm={handleConfirm}
         />
       )}
-
     </div>
   );
 }

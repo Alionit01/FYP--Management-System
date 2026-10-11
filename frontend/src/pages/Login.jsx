@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { CheckCircle2, KeyRound } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { isProfileComplete } from "../profile";
 import API_URL from "../api";
+import Alert from "../components/Alert";
 
 function Login() {
   const navigate = useNavigate();
@@ -81,109 +83,144 @@ function Login() {
   };
 
   return (
-    <main className="min-h-[calc(100vh-56px)] md:min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-10 pb-24 md:pb-10">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <p className="eyebrow">
-            FYP Finder
-          </p>
+    <main className="min-h-[calc(100vh-56px)] md:min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-12 pb-24 md:pb-12">
+      <div className="w-full max-w-5xl grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+        {/* Editorial aside */}
+        <div className="hidden lg:block">
+          <p className="eyebrow">Welcome back</p>
 
-          <h1 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight">
-            Welcome back
+          <h1 className="display mt-5 text-5xl text-forest-900">
+            Sign in to <em className="accent-italic">FYP Finder.</em>
           </h1>
 
-          <p className="mt-3 text-zinc-600">
-            Sign in to manage your profile and team.
+          <p className="mt-5 max-w-md text-ink-soft leading-relaxed">
+            Manage your profile, keep your skills up to date, and stay
+            on top of your team.
           </p>
+
+          <ul className="mt-8 space-y-3 max-w-md">
+            {[
+              "Show your skills to teams looking for you",
+              "Create or edit your team and its openings",
+              "Contact classmates directly",
+            ].map((item) => (
+              <li
+                key={item}
+                className="flex items-start gap-3 text-sm text-ink-soft"
+              >
+                <CheckCircle2
+                  size={18}
+                  aria-hidden="true"
+                  className="mt-0.5 shrink-0 text-forest-600"
+                />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="card p-6 sm:p-8"
-        >
-          <div className="space-y-5">
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-zinc-700 mb-2"
-              >
-                University Email
-              </label>
+        {/* Form */}
+        <div className="w-full max-w-md mx-auto lg:mx-0">
+          <div className="mb-8 text-center lg:text-left">
+            <p className="eyebrow justify-center lg:justify-start">
+              Sign in
+            </p>
 
-              <input
-                id="email"
-                type="email"
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                required
-                autoComplete="email"
-                placeholder="yourname@iqra.edu.pk"
-                className="input-field"
-              />
-            </div>
+            <h1 className="display mt-4 text-3xl sm:text-4xl text-forest-900 lg:hidden">
+              Welcome back
+            </h1>
 
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-zinc-700 mb-2"
-              >
-                Password
-              </label>
-
-              <input
-                id="password"
-                type="password"
-                name="password"
-                value={form.password}
-                onChange={handleChange}
-                required
-                autoComplete="current-password"
-                placeholder="Enter your password"
-                className="input-field"
-              />
-            </div>
-
-            <div className="text-right">
-              <Link
-                to="/forgot-password"
-                className="text-sm font-medium text-zinc-700 hover:text-zinc-900 hover:underline"
-              >
-                Forgot password?
-              </Link>
-            </div>
+            <p className="mt-3 text-ink-soft">
+              Sign in to manage your profile and team.
+            </p>
           </div>
 
-          {location.state?.message && !error && (
-            <div role="status" className="mt-5 border border-green-200 bg-green-50 text-green-700 rounded-lg px-4 py-3 text-sm">
-              {location.state.message}
+          <form onSubmit={handleSubmit} className="card p-6 sm:p-8">
+            <div className="space-y-5">
+              <div>
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-ink-soft mb-2"
+                >
+                  University Email
+                </label>
+
+                <input
+                  id="email"
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  required
+                  autoComplete="email"
+                  placeholder="yourname@iqra.edu.pk"
+                  className="input-field"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-baseline justify-between mb-2">
+                  <label
+                    htmlFor="password"
+                    className="block text-sm font-medium text-ink-soft"
+                  >
+                    Password
+                  </label>
+
+                  <Link
+                    to="/forgot-password"
+                    className="text-xs font-medium text-forest-700 underline-offset-4 hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+
+                <input
+                  id="password"
+                  type="password"
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  required
+                  autoComplete="current-password"
+                  placeholder="Enter your password"
+                  className="input-field"
+                />
+              </div>
             </div>
-          )}
 
-          {error && (
-            <div role="alert" className="mt-5 border border-red-200 bg-red-50 text-red-700 rounded-lg px-4 py-3 text-sm">
-              {error}
-            </div>
-          )}
+            {location.state?.message && !error && (
+              <div className="mt-5">
+                <Alert kind="success">{location.state.message}</Alert>
+              </div>
+            )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="primary-button w-full mt-6 !py-3"
-          >
-            {loading ? "Signing in..." : "Sign In"}
-          </button>
+            {error && (
+              <div className="mt-5">
+                <Alert kind="error">{error}</Alert>
+              </div>
+            )}
 
-          <p className="text-sm text-zinc-500 text-center mt-6">
-            Don't have an account?{" "}
-            <Link
-              to="/register"
-              className="font-medium text-zinc-900 hover:underline"
+            <button
+              type="submit"
+              disabled={loading}
+              className="primary-button w-full mt-6 !py-3"
             >
-              Create one
-            </Link>
-          </p>
-        </form>
+              <KeyRound size={16} aria-hidden="true" />
+              {loading ? "Signing in..." : "Sign In"}
+            </button>
+
+            <p className="text-sm text-ink-muted text-center mt-6">
+              Don't have an account?{" "}
+              <Link
+                to="/register"
+                className="font-semibold text-forest-800 underline-offset-4 hover:underline"
+              >
+                Create one
+              </Link>
+            </p>
+          </form>
+        </div>
       </div>
     </main>
   );

@@ -14,16 +14,18 @@ class ErrorBoundary extends Component {
     if (this.state.hasError) {
       return (
         <main className="page-container max-w-xl">
-          <div className="card p-8 text-center">
-            <h1 className="text-xl font-semibold text-zinc-900">
+          <div className="card p-8 sm:p-10 text-center">
+            <h1 className="display text-2xl text-forest-900">
               Something went wrong
             </h1>
-            <p className="mt-2 text-zinc-500">
+
+            <p className="mt-3 text-ink-soft">
               The page failed to load. Please try again.
             </p>
+
             <button
               type="button"
-              className="primary-button mt-5"
+              className="primary-button mt-6"
               onClick={() => window.location.reload()}
             >
               Reload page

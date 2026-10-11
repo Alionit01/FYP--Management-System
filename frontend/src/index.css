@@ -1,25 +1,96 @@
 @import "tailwindcss";
 
+/* ================================================================== */
+/* FYP Finder design system                                            */
+/*                                                                    */
+/* Everything visual lives here: colour, type, spacing, radii,        */
+/* shadows and the shared UI primitives (.card, .btn*, .input-field,  */
+/* .tag, .badge, .alert-*). Pages should compose these classes and    */
+/* Tailwind utilities — never hard-code raw hex colours in a page.     */
+/* ================================================================== */
+
 @theme {
-  --font-sans: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+  /* Type ---------------------------------------------------------- */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, sans-serif;
+  --font-display: "Fraunces", "Iowan Old Style", "Palatino Linotype",
+    Palatino, Georgia, "Times New Roman", serif;
+
+  /* Warm paper surfaces ------------------------------------------- */
+  --color-cream-50: #fdfaf3; /* page background */
+  --color-cream-100: #f7f1e3; /* alternating sections, skeletons */
+  --color-cream-200: #ece1ca; /* hairlines on cream */
+  --color-paper: #fffdf8; /* card / raised surface */
+
+  /* Deep forest — the brand colour -------------------------------- */
+  --color-forest-50: #edf6ef;
+  --color-forest-100: #d7ebdc;
+  --color-forest-200: #b2d6bd;
+  --color-forest-500: #2c8a58;
+  --color-forest-600: #1f7449;
+  --color-forest-700: #175e3c;
+  --color-forest-800: #114a2f;
+  --color-forest-900: #0c3723;
+  --color-forest-950: #062315;
+
+  /* Ink ------------------------------------------------------------ */
+  --color-ink: #14251c;
+  --color-ink-soft: #40544a;
+  --color-ink-muted: #64786d;
+
+  /* Accent + pastels ---------------------------------------------- */
+  --color-sun-100: #fbeacd;
+  --color-sun-300: #f2c064;
+  --color-sun-500: #dd8a2b;
+  --color-sun-700: #9a5a12;
+  --color-sky-100: #dfeaf5;
+  --color-sky-700: #2d5a83;
+  --color-blush-100: #f9dfd4;
+  --color-blush-700: #a4462c;
+  --color-lilac-100: #e9e2f2;
+  --color-lilac-700: #5c4a80;
+
+  /* Semantic feedback --------------------------------------------- */
+  --color-success-50: #e8f4ea;
+  --color-success-200: #bfe0c8;
+  --color-success-700: #1c6b41;
+  --color-danger-50: #fbeae7;
+  --color-danger-200: #f0c6bf;
+  --color-danger-600: #b13c2c;
+  --color-danger-700: #8f2f22;
+  --color-warning-50: #fdf2da;
+  --color-warning-700: #8a5a06;
+
+  /* Shape + elevation --------------------------------------------- */
+  --radius-card: 1.25rem;
+  --radius-card-lg: 1.75rem;
+
+  --shadow-hairline: 0 1px 2px rgb(12 55 35 / 0.05);
+  --shadow-card: 0 1px 2px rgb(12 55 35 / 0.05),
+    0 10px 28px -18px rgb(12 55 35 / 0.28);
+  --shadow-lift: 0 2px 4px rgb(12 55 35 / 0.06),
+    0 18px 40px -20px rgb(12 55 35 / 0.34);
+  --shadow-pop: 6px 6px 0 0 var(--color-forest-900);
+
+  /* Motion --------------------------------------------------------- */
+  --ease-out-soft: cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 
-:root {
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+/* ================================================================== */
+/* Base — inside Tailwind's base layer so utility classes on an        */
+/* element always win over these element-level defaults.              */
+/* ================================================================== */
 
-  color: #18181b;
-  background: #f4f4f5;
+@layer base {
+
+:root {
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background-color: var(--color-cream-50);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-}
-
-main:focus,
-h1:focus {
-  outline: none;
 }
 
 * {
@@ -30,7 +101,15 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: #f4f4f5;
+  background-color: var(--color-cream-50);
+  color: var(--color-ink);
+}
+
+/* Headings receive focus programmatically on route change (see
+   RouteFocus in App.jsx); no ring needed for that case only. */
+main:focus,
+h1:focus {
+  outline: none;
 }
 
 button,
@@ -49,75 +128,415 @@ a {
   text-decoration: none;
 }
 
+::selection {
+  background: var(--color-sun-100);
+  color: var(--color-forest-900);
+}
+
+/* Consistent, high-contrast focus indicator everywhere. Programmatic
+   heading focus on route change ([tabindex="-1"]) is exempt. */
 a:focus-visible,
-button:focus-visible {
-  outline: 2px solid #18181b;
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible {
+  outline: 2px solid var(--color-forest-600);
   outline-offset: 2px;
+  border-radius: 0.25rem;
 }
 
-/* ------------------------------------------------------------------ */
-/* Shared UI primitives                                               */
-/* Keeps cards, buttons and inputs visually consistent across pages.  */
-/* ------------------------------------------------------------------ */
+} /* @layer base */
 
-/* Card: white surface, subtle border + soft elevation, layered over the
-   off-white page background so it reads as its own object. */
-.card {
-  @apply bg-white border border-zinc-200/80 rounded-2xl shadow-sm;
+/* ================================================================== */
+/* Components — shared UI primitives. Inside the components layer so  */
+/* Tailwind utilities placed on the same element still win.           */
+/* ================================================================== */
+
+@layer components {
+
+/* Expressive editorial display face for hero + page headings. */
+.display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.06;
+  text-wrap: balance;
 }
 
-/* Page shell: consistent max width, mobile padding and bottom spacing
-   so content never collides with the mobile navigation. */
+/* The italic accent word used inside display headings. */
+.display em,
+.accent-italic {
+  font-style: italic;
+  font-weight: 500;
+  color: var(--color-forest-700);
+}
+
+/* ================================================================== */
+/* Layout primitives                                                   */
+/* ================================================================== */
+
 .page-container {
-  @apply max-w-6xl mx-auto w-full px-4 sm:px-6 py-8 pb-24 md:pb-12;
+  @apply max-w-6xl mx-auto w-full px-4 sm:px-6 py-8 pb-24 md:pb-16;
 }
 
-/* Small uppercase eyebrow label used above page and card titles */
+/* Small uppercase editorial label above headings and inside cards. */
 .eyebrow {
-  @apply text-xs font-semibold uppercase tracking-wider text-zinc-500;
+  @apply inline-flex items-center gap-2 text-[0.7rem] font-semibold
+    uppercase tracking-[0.16em] text-forest-700;
 }
 
-/* Primary action button */
+.eyebrow::before {
+  content: "";
+  @apply inline-block h-[2px] w-5 rounded-full bg-sun-500;
+}
+
+/* Card: warm paper surface, forest hairline, soft elevation. */
+.card {
+  background: var(--color-paper);
+  border: 1px solid color-mix(in srgb, var(--color-forest-900) 12%, transparent);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.card-hover {
+  transition: transform 0.2s var(--ease-out-soft),
+    box-shadow 0.2s var(--ease-out-soft),
+    border-color 0.2s var(--ease-out-soft);
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lift);
+  border-color: color-mix(in srgb, var(--color-forest-700) 34%, transparent);
+}
+
+.divider {
+  @apply border-t border-forest-900/10;
+}
+
+/* ================================================================== */
+/* Buttons (pill shape, three tones)                                   */
+/* ================================================================== */
+
+/* NOTE: the base button declarations are repeated in each tone below —
+   `composes` is a CSS-Modules feature and does not work in a global
+   stylesheet, so each button class carries its own copy. */
 .primary-button {
-  @apply inline-flex items-center justify-center gap-2 bg-zinc-900 text-white
-    text-sm font-medium px-5 py-2.5 rounded-lg border border-transparent
-    transition-colors hover:bg-zinc-700 active:bg-zinc-800;
+  @apply inline-flex items-center justify-center gap-2 rounded-full
+    text-sm font-semibold px-5 py-2.5 border border-transparent
+    transition-[background-color,color,box-shadow,transform,border-color]
+    duration-200 select-none;
+  background: var(--color-forest-700);
+  color: var(--color-cream-50);
+  box-shadow: var(--shadow-hairline);
+}
+
+.primary-button:hover:not(:disabled) {
+  background: var(--color-forest-800);
+  transform: translateY(-1px);
+}
+
+.primary-button:active:not(:disabled) {
+  background: var(--color-forest-900);
+  transform: translateY(0);
 }
 
 .primary-button:disabled {
-  @apply opacity-50 cursor-not-allowed;
+  @apply opacity-55 cursor-not-allowed;
+  transform: none;
 }
 
-/* Secondary action button */
 .secondary-button {
-  @apply inline-flex items-center justify-center gap-2 bg-white text-zinc-800
-    text-sm font-medium px-5 py-2.5 rounded-lg border border-zinc-300
-    transition-colors hover:bg-zinc-50 hover:border-zinc-400;
+  @apply inline-flex items-center justify-center gap-2 rounded-full
+    text-sm font-semibold px-5 py-2.5 border border-transparent
+    transition-[background-color,color,box-shadow,transform,border-color]
+    duration-200 select-none;
+  background: var(--color-paper);
+  color: var(--color-forest-900);
+  border-color: color-mix(in srgb, var(--color-forest-900) 22%, transparent);
 }
 
-/* Danger action button (destructive only) */
+.secondary-button:hover:not(:disabled) {
+  background: var(--color-forest-50);
+  border-color: color-mix(in srgb, var(--color-forest-700) 45%, transparent);
+}
+
+.secondary-button:active:not(:disabled) {
+  background: var(--color-forest-100);
+}
+
+.secondary-button:disabled {
+  @apply opacity-55 cursor-not-allowed;
+  transform: none;
+}
+
 .danger-button {
-  @apply inline-flex items-center justify-center gap-2 bg-white text-red-600
-    text-sm font-medium px-5 py-2.5 rounded-lg border border-red-200
-    transition-colors hover:bg-red-50 hover:border-red-300;
+  @apply inline-flex items-center justify-center gap-2 rounded-full
+    text-sm font-semibold px-5 py-2.5 border border-transparent
+    transition-[background-color,color,box-shadow,transform,border-color]
+    duration-200 select-none;
+  background: var(--color-paper);
+  color: var(--color-danger-700);
+  border-color: color-mix(in srgb, var(--color-danger-600) 35%, transparent);
 }
 
-/* Form control: consistent height, subtle border, clean focus ring */
+.danger-button:hover:not(:disabled) {
+  background: var(--color-danger-50);
+  border-color: var(--color-danger-600);
+}
+
+.danger-button:disabled {
+  @apply opacity-55 cursor-not-allowed;
+  transform: none;
+}
+
+/* Text-only link style used for quiet actions ("Clear filters"). */
+.link-quiet {
+  @apply text-sm font-medium text-ink-muted underline-offset-4
+    transition-colors hover:text-forest-800 hover:underline;
+}
+
+/* ================================================================== */
+/* Form controls                                                       */
+/* ================================================================== */
+
 .input-field {
-  @apply w-full bg-white border border-zinc-300 rounded-lg px-4 py-3 text-sm
-    text-zinc-900 outline-none transition
-    focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/25
-    disabled:bg-zinc-50 disabled:text-zinc-500 placeholder:text-zinc-400;
+  @apply w-full rounded-xl border border-forest-900/20 bg-paper px-4 py-3
+    text-sm text-ink outline-none transition
+    placeholder:text-ink-muted/70;
 }
 
-/* Muted tag / chip used for skills, interests and roles */
+.input-field:hover:not(:disabled):not(:focus) {
+  border-color: color-mix(in srgb, var(--color-forest-700) 40%, transparent);
+}
+
+.input-field:focus {
+  border-color: var(--color-forest-600);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--color-forest-600) 22%, transparent);
+}
+
+.input-field:disabled {
+  @apply bg-cream-100 text-ink-muted cursor-not-allowed;
+}
+
+/* Native file input restyled to match the system. */
+.input-file {
+  @apply w-full text-sm text-ink-soft;
+}
+
+.input-file::file-selector-button {
+  @apply mr-4 rounded-full border border-forest-900/20 bg-paper px-4 py-2
+    text-sm font-semibold text-forest-900 transition-colors;
+}
+
+.input-file::file-selector-button:hover {
+  background: var(--color-forest-50);
+}
+
+/* ================================================================== */
+/* Tags, badges, chips                                                 */
+/* ================================================================== */
+
 .tag {
-  @apply inline-flex items-center text-xs font-medium bg-zinc-100 text-zinc-700
-    px-2.5 py-1 rounded-md;
+  @apply inline-flex items-center rounded-full border px-2.5 py-1
+    text-xs font-medium
+    border-forest-900/10 bg-cream-100 text-ink-soft;
 }
 
-/* Status badge */
+.tag-mint {
+  @apply bg-forest-100 text-forest-900 border-forest-200;
+}
+
+.tag-sand {
+  @apply bg-sun-100 text-sun-700 border-sun-300/60;
+}
+
+.tag-sky {
+  @apply bg-sky-100 text-sky-700 border-sky-700/20;
+}
+
+.tag-blush {
+  @apply bg-blush-100 text-blush-700 border-blush-700/20;
+}
+
+.tag-lilac {
+  @apply bg-lilac-100 text-lilac-700 border-lilac-700/20;
+}
+
+.tag-lg {
+  @apply px-3 py-1.5 text-sm;
+}
+
+/* Status badge — always paired with text, never colour alone. */
 .badge {
-  @apply inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full
-    border border-zinc-200 bg-zinc-50 text-zinc-600;
+  @apply inline-flex items-center gap-1.5 rounded-full border px-3 py-1
+    text-xs font-semibold
+    border-forest-900/12 bg-cream-100 text-ink-soft;
+}
+
+.badge-solid {
+  @apply bg-forest-800 text-cream-50 border-transparent;
+}
+
+.badge-open {
+  @apply bg-forest-100 text-forest-900 border-forest-200;
+}
+
+.badge-full {
+  @apply bg-cream-100 text-ink-muted border-forest-900/12;
+}
+
+/* ================================================================== */
+/* Feedback banners                                                    */
+/* ================================================================== */
+
+.alert-error {
+  @apply rounded-xl border px-4 py-3 text-sm font-medium
+    border-danger-200 bg-danger-50 text-danger-700;
+}
+
+.alert-success {
+  @apply rounded-xl border px-4 py-3 text-sm font-medium
+    border-success-200 bg-success-50 text-success-700;
+}
+
+.alert-warning {
+  @apply rounded-xl border px-4 py-3 text-sm
+    border-sun-300/60 bg-warning-50 text-warning-700;
+}
+
+/* ================================================================== */
+/* Loading + empty states                                              */
+/* ================================================================== */
+
+.skeleton {
+  border-radius: 0.75rem;
+  background: linear-gradient(
+    100deg,
+    var(--color-cream-100) 35%,
+    var(--color-cream-50) 50%,
+    var(--color-cream-100) 65%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s linear infinite;
+}
+
+.empty-state {
+  border: 1px dashed color-mix(in srgb, var(--color-forest-700) 35%, transparent);
+  border-radius: var(--radius-card);
+  background: var(--color-paper);
+  box-shadow: var(--shadow-hairline);
+  @apply p-10 text-center;
+}
+
+/* Thin repeating rule used as a section separator. */
+.rule-dashed {
+  @apply border-t-2 border-dashed border-forest-900/15;
+}
+
+} /* @layer components */
+
+/* ================================================================== */
+/* Motion                                                              */
+/* ================================================================== */
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@layer components {
+
+.animate-rise {
+  animation: rise 0.65s var(--ease-out-soft) both;
+}
+
+.animate-pop {
+  animation: pop-in 0.35s var(--ease-out-soft) both;
+}
+
+.delay-1 {
+  animation-delay: 0.09s;
+}
+
+.delay-2 {
+  animation-delay: 0.18s;
+}
+
+.delay-3 {
+  animation-delay: 0.27s;
+}
+
+.delay-4 {
+  animation-delay: 0.36s;
+}
+
+/* ================================================================== */
+/* Decorative patterns                                                 */
+/* ================================================================== */
+
+.pattern-dots {
+  background-image: radial-gradient(
+    var(--color-forest-900) 1px,
+    transparent 1.2px
+  );
+  background-size: 16px 16px;
+  opacity: 0.12;
+}
+
+.pattern-grid {
+  background-image: linear-gradient(
+      to right,
+      color-mix(in srgb, var(--color-forest-900) 55%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--color-forest-900) 55%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 32px 32px;
+  opacity: 0.12;
+}
+
+} /* @layer components */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

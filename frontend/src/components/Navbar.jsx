@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import Logo from "./Logo";
 
 function Navbar() {
   const location = useLocation();
@@ -14,6 +15,14 @@ function Navbar() {
     { name: "Students", path: "/students" },
     { name: "Teams", path: "/teams" },
   ];
+
+  // A section counts as active on its own page and its sub-pages
+  // (e.g. Teams on /teams/123/edit).
+  const isActive = (path) =>
+    path === "/"
+      ? location.pathname === "/"
+      : location.pathname === path ||
+        location.pathname.startsWith(`${path}/`);
 
   const handleLogout = () => {
     setMenuOpen(false);
@@ -55,77 +64,93 @@ function Navbar() {
     };
   }, [menuOpen]);
 
+  const linkClass = (active, base) =>
+    `${base} ${
+      active
+        ? "bg-forest-100 text-forest-900"
+        : "text-ink-soft hover:text-forest-900 hover:bg-forest-50"
+    }`;
+
   return (
     <>
       {/* Desktop Navbar */}
-      <nav className="hidden md:block sticky top-0 z-40 border-b border-zinc-200/80 bg-white/95 backdrop-blur">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link
-            to="/"
-            className="text-lg font-bold tracking-tight text-zinc-900"
-          >
-            FYP Finder
-          </Link>
+      <nav
+        aria-label="Main"
+        className="hidden md:block sticky top-0 z-40 border-b border-forest-900/10 bg-cream-50/92 backdrop-blur"
+      >
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
+          <Logo />
 
           <div className="flex items-center gap-1">
             {links.map((link) => {
-              const active = location.pathname === link.path;
+              const active = isActive(link.path);
 
               return (
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`text-sm font-medium px-3 py-2 rounded-lg transition-colors ${
-                    active
-                      ? "bg-zinc-100 text-zinc-900"
-                      : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50"
-                  }`}
+                  aria-current={active ? "page" : undefined}
+                  className={linkClass(
+                    active,
+                    "text-sm font-medium px-3.5 py-2 rounded-full transition-colors"
+                  )}
                 >
                   {link.name}
                 </Link>
               );
             })}
 
-            <span className="w-px h-5 bg-zinc-200 mx-2" aria-hidden="true" />
+            <span
+              className="w-px h-5 bg-forest-900/15 mx-2"
+              aria-hidden="true"
+            />
 
             {isLoggedIn ? (
               <>
                 <Link
                   to="/my-team"
-                  className={`text-sm font-medium px-3 py-2 rounded-lg transition-colors ${
-                    location.pathname === "/my-team"
-                      ? "bg-zinc-100 text-zinc-900"
-                      : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50"
-                  }`}
+                  aria-current={
+                    isActive("/my-team") ? "page" : undefined
+                  }
+                  className={linkClass(
+                    isActive("/my-team"),
+                    "text-sm font-medium px-3.5 py-2 rounded-full transition-colors"
+                  )}
                 >
                   My Team
                 </Link>
 
                 <Link
                   to="/my-profile"
-                  className={`text-sm font-medium px-3 py-2 rounded-lg transition-colors ${
-                    location.pathname === "/my-profile"
-                      ? "bg-zinc-100 text-zinc-900"
-                      : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50"
-                  }`}
+                  aria-current={
+                    isActive("/my-profile") ? "page" : undefined
+                  }
+                  className={linkClass(
+                    isActive("/my-profile"),
+                    "text-sm font-medium px-3.5 py-2 rounded-full transition-colors"
+                  )}
                 >
                   My Profile
                 </Link>
 
                 <button
+                  type="button"
                   onClick={handleLogout}
-                  className="ml-2 bg-zinc-900 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-zinc-700 active:bg-zinc-800 transition-colors"
+                  className="secondary-button ml-2 !py-2"
                 >
                   Logout
                 </button>
               </>
             ) : (
-              <Link
-                to="/login"
-                className="ml-2 bg-zinc-900 !text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-zinc-700 active:bg-zinc-800 transition-colors"
-              >
-                Login
-              </Link>
+              <>
+                <Link to="/register" className="link-quiet px-3 py-2">
+                  Create account
+                </Link>
+
+                <Link to="/login" className="primary-button ml-1 !py-2">
+                  Sign in
+                </Link>
+              </>
             )}
           </div>
         </div>
@@ -134,20 +159,15 @@ function Navbar() {
       {/* Mobile Top Bar */}
       <header
         ref={headerRef}
-        className="md:hidden sticky top-0 z-40 border-b border-zinc-200/80 bg-white/95 backdrop-blur"
+        className="md:hidden sticky top-0 z-40 border-b border-forest-900/10 bg-cream-50/95 backdrop-blur"
       >
         <div className="h-14 px-4 flex items-center justify-between">
-          <Link
-            to="/"
-            onClick={handleLinkClick}
-            className="text-lg font-bold tracking-tight text-zinc-900"
-          >
-            FYP Finder
-          </Link>
+          <Logo onClick={handleLinkClick} />
 
           <button
+            type="button"
             onClick={() => setMenuOpen(!menuOpen)}
-            className="-mr-2 p-2 rounded-lg text-zinc-700 hover:bg-zinc-100 active:bg-zinc-200 transition-colors"
+            className="-mr-2 p-2 rounded-full text-forest-900 hover:bg-forest-100 active:bg-forest-200 transition-colors"
             aria-label={menuOpen ? "Close menu" : "Open menu"}
             aria-expanded={menuOpen}
           >
@@ -161,20 +181,21 @@ function Navbar() {
 
         {/* Mobile Menu */}
         {menuOpen && (
-          <div className="border-t border-zinc-200 bg-white px-4 pb-4 pt-2">
+          <div className="border-t border-forest-900/10 bg-cream-50 px-4 pb-5 pt-2 shadow-lift">
             <div className="flex flex-col">
               {links.map((link) => {
-                const active = location.pathname === link.path;
+                const active = isActive(link.path);
 
                 return (
                   <Link
                     key={link.path}
                     to={link.path}
                     onClick={handleLinkClick}
-                    className={`flex items-center justify-between px-3 py-3 rounded-lg text-sm font-medium transition-colors ${
+                    aria-current={active ? "page" : undefined}
+                    className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
                       active
-                        ? "bg-zinc-100 text-zinc-900"
-                        : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
+                        ? "bg-forest-100 text-forest-900"
+                        : "text-ink-soft hover:bg-forest-50 hover:text-forest-900"
                     }`}
                   >
                     {link.name}
@@ -187,10 +208,10 @@ function Navbar() {
                   <Link
                     to="/my-team"
                     onClick={handleLinkClick}
-                    className={`flex items-center justify-between px-3 py-3 rounded-lg text-sm font-medium transition-colors ${
-                      location.pathname === "/my-team"
-                        ? "bg-zinc-100 text-zinc-900"
-                        : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
+                    className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
+                      isActive("/my-team")
+                        ? "bg-forest-100 text-forest-900"
+                        : "text-ink-soft hover:bg-forest-50 hover:text-forest-900"
                     }`}
                   >
                     My Team
@@ -199,30 +220,41 @@ function Navbar() {
                   <Link
                     to="/my-profile"
                     onClick={handleLinkClick}
-                    className={`flex items-center justify-between px-3 py-3 rounded-lg text-sm font-medium transition-colors ${
-                      location.pathname === "/my-profile"
-                        ? "bg-zinc-100 text-zinc-900"
-                        : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
+                    className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
+                      isActive("/my-profile")
+                        ? "bg-forest-100 text-forest-900"
+                        : "text-ink-soft hover:bg-forest-50 hover:text-forest-900"
                     }`}
                   >
                     My Profile
                   </Link>
 
                   <button
+                    type="button"
                     onClick={handleLogout}
-                    className="mt-3 w-full bg-zinc-900 text-white py-3 rounded-lg text-sm font-medium hover:bg-zinc-700 active:bg-zinc-800 transition-colors"
+                    className="secondary-button mt-3 w-full !py-3"
                   >
                     Logout
                   </button>
                 </>
               ) : (
-                <Link
-                  to="/login"
-                  onClick={handleLinkClick}
-                  className="mt-3 w-full text-center bg-zinc-900 !text-white py-3 rounded-lg text-sm font-medium hover:bg-zinc-700 active:bg-zinc-800 transition-colors"
-                >
-                  Login
-                </Link>
+                <>
+                  <Link
+                    to="/login"
+                    onClick={handleLinkClick}
+                    className="primary-button mt-3 w-full !py-3"
+                  >
+                    Sign in
+                  </Link>
+
+                  <Link
+                    to="/register"
+                    onClick={handleLinkClick}
+                    className="secondary-button mt-2 w-full !py-3"
+                  >
+                    Create account
+                  </Link>
+                </>
               )}
             </div>
           </div>

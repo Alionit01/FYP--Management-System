@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Rocket } from "lucide-react";
 import API_URL from "../api";
+import Alert from "../components/Alert";
 
 function CreateTeam() {
   const navigate = useNavigate();
@@ -64,37 +66,34 @@ function CreateTeam() {
 
   return (
     <main className="page-container max-w-3xl">
-      <div className="mb-8">
-        <button
-          onClick={() => navigate("/teams")}
-          className="text-sm font-medium text-zinc-600 hover:text-zinc-900 transition-colors"
-        >
-          ← Back to Teams
-        </button>
+      <button
+        type="button"
+        onClick={() => navigate("/teams")}
+        className="link-quiet inline-flex items-center gap-2"
+      >
+        <ArrowLeft size={16} aria-hidden="true" />
+        <span>Back to Teams</span>
+      </button>
 
-        <p className="eyebrow mt-7">
-          Team Setup
-        </p>
+      <div className="mb-8 mt-6 max-w-2xl">
+        <p className="eyebrow">Team Setup</p>
 
-        <h1 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight">
-          Create a Team
+        <h1 className="display mt-3 text-4xl sm:text-5xl">
+          Create a <em className="accent-italic">team.</em>
         </h1>
 
-        <p className="mt-3 text-zinc-600 leading-relaxed">
-          Create your FYP team and let other students know what
-          you're looking for.
+        <p className="mt-4 text-ink-soft leading-relaxed">
+          Create your FYP team and let other students know what you're
+          looking for.
         </p>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="card p-5 sm:p-8"
-      >
+      <form onSubmit={handleSubmit} className="card p-5 sm:p-8">
         <div className="space-y-6">
           <div>
             <label
               htmlFor="name"
-              className="block text-sm font-medium text-zinc-700 mb-2"
+              className="block text-sm font-medium text-ink-soft mb-2"
             >
               Team Name *
             </label>
@@ -114,7 +113,7 @@ function CreateTeam() {
           <div>
             <label
               htmlFor="project_title"
-              className="block text-sm font-medium text-zinc-700 mb-2"
+              className="block text-sm font-medium text-ink-soft mb-2"
             >
               Project Title
             </label>
@@ -133,7 +132,7 @@ function CreateTeam() {
           <div>
             <label
               htmlFor="description"
-              className="block text-sm font-medium text-zinc-700 mb-2"
+              className="block text-sm font-medium text-ink-soft mb-2"
             >
               About the Project
             </label>
@@ -153,7 +152,7 @@ function CreateTeam() {
             <div>
               <label
                 htmlFor="department_preference"
-                className="block text-sm font-medium text-zinc-700 mb-2"
+                className="block text-sm font-medium text-ink-soft mb-2"
               >
                 Department Preference *
               </label>
@@ -178,7 +177,7 @@ function CreateTeam() {
             <div>
               <label
                 htmlFor="spots_available"
-                className="block text-sm font-medium text-zinc-700 mb-2"
+                className="block text-sm font-medium text-ink-soft mb-2"
               >
                 Available Spots *
               </label>
@@ -194,7 +193,7 @@ function CreateTeam() {
                 className="input-field"
               />
 
-              <p className="text-xs text-zinc-500 mt-2">
+              <p className="text-xs text-ink-muted mt-2">
                 Number of additional members you need.
               </p>
             </div>
@@ -203,7 +202,7 @@ function CreateTeam() {
           <div>
             <label
               htmlFor="skills_needed"
-              className="block text-sm font-medium text-zinc-700 mb-2"
+              className="block text-sm font-medium text-ink-soft mb-2"
             >
               Skills Needed
             </label>
@@ -222,7 +221,7 @@ function CreateTeam() {
           <div>
             <label
               htmlFor="roles_needed"
-              className="block text-sm font-medium text-zinc-700 mb-2"
+              className="block text-sm font-medium text-ink-soft mb-2"
             >
               Roles Needed
             </label>
@@ -241,7 +240,7 @@ function CreateTeam() {
           <div>
             <label
               htmlFor="contact"
-              className="block text-sm font-medium text-zinc-700 mb-2"
+              className="block text-sm font-medium text-ink-soft mb-2"
             >
               Contact
             </label>
@@ -256,19 +255,19 @@ function CreateTeam() {
               className="input-field"
             />
 
-            <p className="text-xs text-zinc-500 mt-2">
+            <p className="text-xs text-ink-muted mt-2">
               This will only be shown to logged-in students.
             </p>
           </div>
         </div>
 
         {error && (
-          <div role="alert" className="mt-6 border border-red-200 bg-red-50 text-red-700 rounded-lg px-4 py-3 text-sm">
-            {error}
+          <div className="mt-6">
+            <Alert kind="error">{error}</Alert>
           </div>
         )}
 
-        <div className="mt-8 pt-6 border-t border-zinc-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+        <div className="mt-8 pt-6 divider flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
           <button
             type="button"
             onClick={() => navigate("/teams")}
@@ -282,6 +281,7 @@ function CreateTeam() {
             disabled={loading}
             className="primary-button"
           >
+            <Rocket size={16} aria-hidden="true" />
             {loading ? "Creating..." : "Create Team"}
           </button>
         </div>

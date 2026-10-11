@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { BadgeCheck, ShieldCheck } from "lucide-react";
 import API_URL from "../api";
+import Alert from "../components/Alert";
+import AuthShell from "../components/AuthShell";
 
 function VerifyEmail() {
   const [token] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get("token"));
@@ -44,111 +47,93 @@ function VerifyEmail() {
   };
 
   return (
-    <main className="min-h-[calc(100vh-56px)] md:min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-10 pb-24 md:pb-10">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <p className="eyebrow">
-            FYP Finder
+    <AuthShell
+      eyebrow="Verify your email"
+      title="Activate your account"
+      subtitle="Confirm your email address and set a password to get started."
+    >
+      {verified ? (
+        <>
+          <div className="flex items-start gap-3">
+            <BadgeCheck
+              size={20}
+              aria-hidden="true"
+              className="mt-0.5 shrink-0 text-forest-700"
+            />
+
+            <Alert kind="success">
+              Your email is verified. You can now sign in.
+            </Alert>
+          </div>
+
+          <Link to="/login" className="primary-button w-full mt-6 !py-3">
+            <ShieldCheck size={16} aria-hidden="true" />
+            Sign in
+          </Link>
+        </>
+      ) : token ? (
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <p className="text-sm text-ink-soft">
+            Set your password to activate your account.
           </p>
 
-          <h1 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight">
-            Email verification
-          </h1>
+          <div>
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-ink-soft mb-2"
+            >
+              Password
+            </label>
 
-          <p className="mt-3 text-zinc-600">
-            Confirm your account to get started.
-          </p>
-        </div>
+            <input
+              id="password"
+              className="input-field"
+              type="password"
+              required
+              minLength="6"
+              autoComplete="new-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </div>
 
-        <div className="card p-6 sm:p-8">
-          {verified ? (
-            <>
-              <div
-                role="status"
-                className="border border-green-200 bg-green-50 text-green-700 rounded-lg px-4 py-3 text-sm"
-              >
-                Your email is verified. You can now sign in.
-              </div>
+          <div>
+            <label
+              htmlFor="confirm-password"
+              className="block text-sm font-medium text-ink-soft mb-2"
+            >
+              Confirm password
+            </label>
 
-              <Link
-                to="/login"
-                className="primary-button w-full mt-6 !py-3"
-              >
-                Sign in
-              </Link>
-            </>
-          ) : token ? (
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <p className="text-sm text-zinc-600">
-                Set your password to activate your account.
-              </p>
+            <input
+              id="confirm-password"
+              className="input-field"
+              type="password"
+              required
+              minLength="6"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+            />
+          </div>
 
-              <div>
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-medium text-zinc-700 mb-2"
-                >
-                  Password
-                </label>
+          {error && <Alert kind="error">{error}</Alert>}
 
-                <input
-                  id="password"
-                  className="input-field"
-                  type="password"
-                  required
-                  minLength="6"
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="confirm-password"
-                  className="block text-sm font-medium text-zinc-700 mb-2"
-                >
-                  Confirm password
-                </label>
-
-                <input
-                  id="confirm-password"
-                  className="input-field"
-                  type="password"
-                  required
-                  minLength="6"
-                  autoComplete="new-password"
-                  value={confirmPassword}
-                  onChange={(event) => setConfirmPassword(event.target.value)}
-                />
-              </div>
-
-              {error && (
-                <div
-                  role="alert"
-                  className="border border-red-200 bg-red-50 text-red-700 rounded-lg px-4 py-3 text-sm"
-                >
-                  {error}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={saving}
-                className="primary-button w-full !py-3"
-              >
-                {saving ? "Activating..." : "Activate account"}
-              </button>
-            </form>
-          ) : (
-            <p className="text-sm text-zinc-600">
-              Verification link is missing a token. Please open the link in
-              your email.
-            </p>
-          )}
-        </div>
-      </div>
-    </main>
+          <button
+            type="submit"
+            disabled={saving}
+            className="primary-button w-full !py-3"
+          >
+            {saving ? "Activating..." : "Activate account"}
+          </button>
+        </form>
+      ) : (
+        <p className="text-sm text-ink-soft leading-relaxed">
+          Verification link is missing a token. Please open the link in
+          your email.
+        </p>
+      )}
+    </AuthShell>
   );
 }
 

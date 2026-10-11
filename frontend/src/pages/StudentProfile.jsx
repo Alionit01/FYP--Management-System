@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, BriefcaseBusiness, Code2, Mail, MessageCircle } from "lucide-react";
 import API_URL from "../api";
+import Alert from "../components/Alert";
+import Avatar from "../components/Avatar";
+import Tags from "../components/Tags";
 
 function isSafeUrl(url) {
   if (!url) return false;
@@ -112,8 +115,25 @@ function StudentProfile() {
   if (loading) {
     return (
       <main className="page-container max-w-4xl">
-        <div className="card py-12 text-center text-zinc-500">
-          Loading profile...
+        <p role="status" className="sr-only">
+          Loading profile…
+        </p>
+
+        <div className="skeleton h-5 w-40" aria-hidden="true" />
+
+        <div className="card mt-6 p-5 sm:p-7" aria-hidden="true">
+          <div className="flex flex-col sm:flex-row sm:items-start gap-5">
+            <div className="skeleton h-20 w-20 rounded-full" />
+
+            <div className="flex-1 space-y-3">
+              <div className="skeleton h-7 w-48" />
+              <div className="skeleton h-4 w-32" />
+            </div>
+          </div>
+
+          <div className="skeleton mt-8 h-4 w-full" />
+          <div className="skeleton mt-2 h-4 w-5/6" />
+          <div className="skeleton mt-8 h-20 w-full" />
         </div>
       </main>
     );
@@ -122,19 +142,14 @@ function StudentProfile() {
   if (!student) {
     return (
       <main className="page-container max-w-4xl">
-        <div className="card p-8 text-center">
-          <h1 className="text-xl font-semibold text-zinc-900">
+        <div className="empty-state">
+          <h1 className="display text-2xl text-forest-900">
             Student not found
           </h1>
 
-          <p className="mt-2 text-zinc-500">
-            {error}
-          </p>
+          <p className="mt-2 text-ink-soft">{error}</p>
 
-          <Link
-            to="/students"
-            className="primary-button mt-5"
-          >
+          <Link to="/students" className="primary-button mt-5">
             Back to Students
           </Link>
         </div>
@@ -162,46 +177,46 @@ function StudentProfile() {
       <button
         type="button"
         onClick={() => navigate("/students")}
-        className="inline-flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 cursor-pointer transition-colors"
+        className="link-quiet inline-flex items-center gap-2"
       >
-        <ArrowLeft size={18} />
+        <ArrowLeft size={16} aria-hidden="true" />
         <span>Back to Students</span>
       </button>
 
       {/* Profile */}
-      <section className="card mt-6 p-5 sm:p-7">
+      <section className="card mt-6 p-5 sm:p-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-start gap-5">
-          {student.profile_picture ? (
-            <img
-              src={student.profile_picture}
-              alt={student.name}
-              className="w-20 h-20 rounded-full object-cover shrink-0 ring-2 ring-zinc-100"
-            />
-          ) : (
-            <div className="w-20 h-20 rounded-full bg-zinc-100 flex items-center justify-center text-2xl font-semibold text-zinc-700 shrink-0 ring-2 ring-zinc-100">
-              {student.name.charAt(0).toUpperCase()}
-            </div>
-          )}
+          <Avatar
+            name={student.name}
+            src={student.profile_picture}
+            size="lg"
+          />
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 break-words">
+              <h1 className="display text-3xl sm:text-4xl text-forest-900 break-words">
                 {student.name}
               </h1>
 
               {student.fyp_status && (
-                <span className="badge w-fit">
+                <span
+                  className={`badge w-fit ${
+                    student.fyp_status === "Looking for a team"
+                      ? "badge-open"
+                      : "badge-full"
+                  }`}
+                >
                   {student.fyp_status}
                 </span>
               )}
             </div>
 
-            <p className="mt-2 text-sm font-medium text-zinc-700">
+            <p className="mt-3 text-sm font-medium text-ink-soft">
               {student.program}
             </p>
 
-            <p className="mt-0.5 text-xs text-zinc-500">
+            <p className="mt-0.5 text-xs text-ink-muted">
               {student.university_id}
             </p>
           </div>
@@ -209,12 +224,10 @@ function StudentProfile() {
 
         {/* About */}
         {student.bio && (
-          <div className="mt-7 pt-6 border-t border-zinc-100">
-            <p className="eyebrow">
-              About
-            </p>
+          <div className="mt-8 pt-6 divider">
+            <p className="eyebrow">About</p>
 
-            <p className="mt-2 text-zinc-600 leading-relaxed">
+            <p className="mt-3 text-ink-soft leading-relaxed">
               {student.bio}
             </p>
           </div>
@@ -222,20 +235,11 @@ function StudentProfile() {
 
         {/* Skills */}
         {skills.length > 0 && (
-          <div className="mt-6">
-            <p className="eyebrow">
-              Skills
-            </p>
+          <div className="mt-7">
+            <p className="eyebrow">Skills</p>
 
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {skills.map((skill, index) => (
-                <span
-                  key={index}
-                  className="tag !text-sm !px-3 !py-1.5"
-                >
-                  {skill}
-                </span>
-              ))}
+            <div className="mt-3">
+              <Tags items={skills} size="lg" />
             </div>
           </div>
         )}
@@ -243,26 +247,17 @@ function StudentProfile() {
         {/* Interests */}
         {interests.length > 0 && (
           <div className="mt-6">
-            <p className="eyebrow">
-              Interests
-            </p>
+            <p className="eyebrow">Interests</p>
 
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {interests.map((interest, index) => (
-                <span
-                  key={index}
-                  className="tag !text-sm !px-3 !py-1.5"
-                >
-                  {interest}
-                </span>
-              ))}
+            <div className="mt-3">
+              <Tags items={interests} size="lg" />
             </div>
           </div>
         )}
 
         {/* Links */}
         {(isSafeUrl(student.github) || isSafeUrl(student.linkedin)) && (
-          <div className="mt-6 flex flex-wrap gap-3">
+          <div className="mt-7 flex flex-wrap gap-3">
             {isSafeUrl(student.github) && (
               <a
                 href={student.github}
@@ -270,6 +265,7 @@ function StudentProfile() {
                 rel="noreferrer"
                 className="secondary-button"
               >
+                <Code2 size={16} aria-hidden="true" />
                 GitHub
               </a>
             )}
@@ -281,6 +277,7 @@ function StudentProfile() {
                 rel="noreferrer"
                 className="secondary-button"
               >
+                <BriefcaseBusiness size={16} aria-hidden="true" />
                 LinkedIn
               </a>
             )}
@@ -288,19 +285,17 @@ function StudentProfile() {
         )}
 
         {/* Contact */}
-        <div className="mt-7 pt-6 border-t border-zinc-100">
+        <div className="mt-8 pt-6 divider">
           {!contact ? (
             <div>
-              <p className="eyebrow">
-                Contact
-              </p>
+              <p className="eyebrow">Contact</p>
 
-              <h2 className="mt-1.5 text-lg font-semibold text-zinc-900">
+              <h2 className="display mt-3 text-xl text-forest-900">
                 Want to contact{" "}
                 {student.name.split(" ")[0]}?
               </h2>
 
-              <p className="mt-1 text-sm text-zinc-500">
+              <p className="mt-2 text-sm text-ink-muted">
                 Contact information is only available to logged-in
                 students.
               </p>
@@ -313,32 +308,31 @@ function StudentProfile() {
               >
                 {contactLoading
                   ? "Loading..."
-                  : "Show Contact Information"}
+                  : "Show contact information"}
               </button>
 
               {error && (
-                <p className="mt-3 text-sm text-red-600">
-                  {error}
-                </p>
+                <div className="mt-4 max-w-md">
+                  <Alert kind="error">{error}</Alert>
+                </div>
               )}
             </div>
           ) : (
             <div>
-              <p className="eyebrow">
-                Contact Information
-              </p>
+              <p className="eyebrow">Contact Information</p>
 
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 {contact.email && (
                   <a
                     href={`mailto:${contact.email}`}
-                    className="block border border-zinc-200 rounded-xl p-3.5 hover:border-zinc-400 hover:bg-zinc-50 transition-colors"
+                    className="card card-hover block p-4"
                   >
-                    <span className="text-xs font-medium text-zinc-500 block">
+                    <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-forest-700">
+                      <Mail size={14} aria-hidden="true" />
                       Email
                     </span>
 
-                    <span className="mt-1 block text-sm font-medium text-zinc-900 break-all">
+                    <span className="mt-1.5 block text-sm font-medium text-ink break-all">
                       {contact.email}
                     </span>
                   </a>
@@ -352,13 +346,14 @@ function StudentProfile() {
                     )}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="block border border-zinc-200 rounded-xl p-3.5 hover:border-zinc-400 hover:bg-zinc-50 transition-colors"
+                    className="card card-hover block p-4"
                   >
-                    <span className="text-xs font-medium text-zinc-500 block">
+                    <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-forest-700">
+                      <MessageCircle size={14} aria-hidden="true" />
                       WhatsApp
                     </span>
 
-                    <span className="mt-1 block text-sm font-medium text-zinc-900">
+                    <span className="mt-1.5 block text-sm font-medium text-ink">
                       {contact.whatsapp}
                     </span>
                   </a>
@@ -373,4 +368,3 @@ function StudentProfile() {
 }
 
 export default StudentProfile;
-

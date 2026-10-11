@@ -1,7 +1,9 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Pencil, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import API_URL from "../api";
+import Avatar from "../components/Avatar";
+import Tags from "../components/Tags";
 
 function TeamProfile() {
   const { id } = useParams();
@@ -59,8 +61,19 @@ function TeamProfile() {
   if (loading) {
     return (
       <main className="page-container max-w-4xl">
-        <div className="card py-12 text-center text-zinc-500">
-          Loading team...
+        <p role="status" className="sr-only">
+          Loading team…
+        </p>
+
+        <div className="skeleton h-5 w-32" aria-hidden="true" />
+
+        <div className="card mt-6 p-5 sm:p-7" aria-hidden="true">
+          <div className="skeleton h-3 w-20" />
+          <div className="skeleton mt-3 h-8 w-64" />
+          <div className="skeleton mt-3 h-4 w-40" />
+          <div className="skeleton mt-8 h-4 w-full" />
+          <div className="skeleton mt-2 h-4 w-5/6" />
+          <div className="skeleton mt-8 h-16 w-full" />
         </div>
       </main>
     );
@@ -69,7 +82,19 @@ function TeamProfile() {
   if (!team) {
     return (
       <main className="page-container max-w-4xl">
-        <p className="text-zinc-500">Team not found.</p>
+        <div className="empty-state">
+          <h1 className="display text-2xl text-forest-900">
+            Team not found
+          </h1>
+
+          <p className="mt-2 text-ink-soft">
+            This team may have been deleted, or the link is wrong.
+          </p>
+
+          <Link to="/teams" className="primary-button mt-5">
+            Back to Teams
+          </Link>
+        </div>
       </main>
     );
   }
@@ -88,31 +113,32 @@ function TeamProfile() {
         .filter(Boolean)
     : [];
 
+  const isOwner =
+    String(team.created_by) === String(localStorage.getItem("student_id"));
+
   return (
     <main className="page-container max-w-4xl">
       {/* Back */}
       <button
         type="button"
         onClick={() => navigate("/teams")}
-        className="inline-flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 cursor-pointer transition-colors"
+        className="link-quiet inline-flex items-center gap-2"
       >
-        <ArrowLeft size={18} />
+        <ArrowLeft size={16} aria-hidden="true" />
         <span>Back to Teams</span>
       </button>
 
       {/* Team Header */}
-      <section className="card mt-6 p-5 sm:p-7">
+      <section className="card mt-6 p-5 sm:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <p className="eyebrow">
-              Team
-            </p>
+            <p className="eyebrow">Team</p>
 
-            <h1 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 break-words">
+            <h1 className="display mt-2 text-3xl sm:text-4xl text-forest-900 break-words">
               {team.name}
             </h1>
 
-            <p className="mt-2 text-sm font-medium text-zinc-600">
+            <p className="mt-3 text-sm font-medium text-ink-soft">
               {team.department_preference === "Any"
                 ? "Open to all departments"
                 : team.department_preference}
@@ -121,10 +147,8 @@ function TeamProfile() {
 
           <div className="flex items-center gap-3 self-start shrink-0">
             <span
-              className={`text-xs font-semibold px-3 py-1.5 rounded-full ${
-                team.spots_available > 0
-                  ? "bg-zinc-900 text-white"
-                  : "bg-zinc-100 text-zinc-600"
+              className={`badge ${
+                team.spots_available > 0 ? "badge-open" : "badge-full"
               }`}
             >
               {team.spots_available > 0
@@ -134,12 +158,13 @@ function TeamProfile() {
                 : "Full"}
             </span>
 
-            {String(team.created_by) ===
-              String(localStorage.getItem("student_id")) && (
+            {isOwner && (
               <button
+                type="button"
                 onClick={() => navigate(`/teams/${team.id}/edit`)}
                 className="primary-button"
               >
+                <Pencil size={15} aria-hidden="true" />
                 Edit Team
               </button>
             )}
@@ -148,12 +173,10 @@ function TeamProfile() {
 
         {/* Project */}
         {team.project_title && (
-          <div className="mt-7 pt-6 border-t border-zinc-100">
-            <p className="eyebrow">
-              Project
-            </p>
+          <div className="mt-8 pt-6 divider">
+            <p className="eyebrow">Project</p>
 
-            <h2 className="mt-1.5 text-lg font-semibold text-zinc-900 leading-snug">
+            <h2 className="display mt-2 text-xl text-forest-900 leading-snug">
               {team.project_title}
             </h2>
           </div>
@@ -161,12 +184,10 @@ function TeamProfile() {
 
         {/* Description */}
         {team.description && (
-          <div className="mt-6">
-            <p className="eyebrow">
-              Description
-            </p>
+          <div className={team.project_title ? "mt-6" : "mt-8 pt-6 divider"}>
+            <p className="eyebrow">Description</p>
 
-            <p className="mt-2 text-zinc-600 leading-relaxed">
+            <p className="mt-3 text-ink-soft leading-relaxed whitespace-pre-line">
               {team.description}
             </p>
           </div>
@@ -175,19 +196,10 @@ function TeamProfile() {
         {/* Skills */}
         {skills.length > 0 && (
           <div className="mt-6">
-            <p className="eyebrow">
-              Skills Needed
-            </p>
+            <p className="eyebrow">Skills Needed</p>
 
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {skills.map((skill, index) => (
-                <span
-                  key={index}
-                  className="tag !text-sm !px-3 !py-1.5"
-                >
-                  {skill}
-                </span>
-              ))}
+            <div className="mt-3">
+              <Tags items={skills} size="lg" />
             </div>
           </div>
         )}
@@ -195,31 +207,20 @@ function TeamProfile() {
         {/* Roles */}
         {roles.length > 0 && (
           <div className="mt-6">
-            <p className="eyebrow">
-              Roles Needed
-            </p>
+            <p className="eyebrow">Roles Needed</p>
 
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {roles.map((role, index) => (
-                <span
-                  key={index}
-                  className="tag !text-sm !px-3 !py-1.5"
-                >
-                  {role}
-                </span>
-              ))}
+            <div className="mt-3">
+              <Tags items={roles} size="lg" />
             </div>
           </div>
         )}
 
         {/* Contact */}
         {contact && (
-          <div className="mt-7 pt-6 border-t border-zinc-100">
-            <p className="eyebrow">
-              Team Contact
-            </p>
+          <div className="mt-8 pt-6 divider">
+            <p className="eyebrow">Team Contact</p>
 
-            <p className="mt-1.5 text-sm font-medium text-zinc-800 break-all">
+            <p className="mt-2 text-sm font-medium text-ink break-all">
               {contact}
             </p>
           </div>
@@ -227,13 +228,13 @@ function TeamProfile() {
       </section>
 
       {/* Members */}
-      <section className="mt-6">
-        <div className="mb-4 flex items-baseline justify-between">
-          <h2 className="text-lg font-semibold text-zinc-900">
-            Members
-          </h2>
+      <section className="mt-8">
+        <div className="mb-4 flex items-center gap-2">
+          <Users size={18} aria-hidden="true" className="text-forest-700" />
 
-          <span className="text-sm font-medium text-zinc-600">
+          <h2 className="display text-xl text-forest-900">Members</h2>
+
+          <span className="ml-auto text-sm font-medium text-ink-soft">
             {team.members?.length || 0}{" "}
             {team.members?.length === 1 ? "member" : "members"}
           </span>
@@ -245,37 +246,39 @@ function TeamProfile() {
               <Link
                 key={member.id}
                 to={`/students/${member.id}`}
-                className="card flex items-center justify-between gap-3 p-4 transition-shadow hover:shadow-md"
+                className="card card-hover flex items-center justify-between gap-3 p-4"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-full bg-zinc-100 flex items-center justify-center text-sm font-semibold text-zinc-700 shrink-0">
-                    {member.name.charAt(0).toUpperCase()}
-                  </div>
+                  <Avatar name={member.name} size="sm" />
 
                   <div className="min-w-0">
-                    <p className="font-medium text-zinc-900 truncate">
+                    <p className="font-medium text-forest-900 truncate">
                       {member.name}
                     </p>
 
-                    <p className="text-xs font-medium text-zinc-500">
+                    <p className="text-xs font-medium text-ink-muted">
                       {member.program}
                     </p>
 
                     {String(member.id) === String(team.created_by) && (
-                      <span className="badge mt-1.5">Team Owner</span>
+                      <span className="badge badge-open mt-1.5">
+                        Team Owner
+                      </span>
                     )}
                   </div>
                 </div>
 
-                <span className="text-sm font-medium text-zinc-500 shrink-0">
+                <span className="text-sm font-medium text-ink-muted shrink-0">
                   View
                 </span>
               </Link>
             ))}
           </div>
         ) : (
-          <div className="card p-6 text-center text-sm text-zinc-500">
-            No members found.
+          <div className="empty-state !p-8">
+            <p className="text-sm text-ink-soft">
+              No members found.
+            </p>
           </div>
         )}
       </section>

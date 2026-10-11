@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 
 import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 
@@ -151,6 +152,7 @@ function App() {
         <Route path="*" element={<NotFound />} />
       </Routes>
       </ErrorBoundary>
+      <Footer />
     </BrowserRouter>
   );
 }
