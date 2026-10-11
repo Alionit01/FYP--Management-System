@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func, text
 from sqlalchemy.exc import IntegrityError
+from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 
 from sqlalchemy.orm import Session
@@ -34,13 +35,41 @@ from .dependencies import get_current_student
 
 app = FastAPI()
 
+# Load .env explicitly so ALLOWED_ORIGINS below does not depend on the
+# import order of sibling modules (database/auth) happening to call it.
+load_dotenv()
+
+
+# Exact origins allowed to call this API. CORS requires exact string
+# matches (no wildcards, and "localhost" != "127.0.0.1"), so they are
+# listed explicitly rather than inferred.
+#
+# The deployed frontend is always allowed. Local dev servers are added
+# via the ALLOWED_ORIGINS env var (comma-separated), which *extends*
+# the production list so a partial local value can never drop it:
+#
+#   ALLOWED_ORIGINS=http://127.0.0.1:5199,http://localhost:5173
+#
+# Never add "*" here — the API returns data for signed-in students.
+_PRODUCTION_ORIGINS = ("https://fypms-psi.vercel.app",)
+
+# Sensible local defaults when ALLOWED_ORIGINS is unset: Vite's default
+# port on both possible hostnames.
+_DEFAULT_DEV_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
+
+_extra_origins = tuple(
+    origin.strip()
+    for origin in os.getenv("ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+)
+
+ALLOWED_ORIGINS = list(
+    dict.fromkeys(_PRODUCTION_ORIGINS + (_extra_origins or _DEFAULT_DEV_ORIGINS))
+)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "https://fypms-psi.vercel.app",
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -438,25 +467,10 @@ def get_students(skip: int = 0, limit: int = 50):
 
     result = []
 
-    for student in students:
-        result.append({
-            "id": student.id,
-            "name": student.name,
-            "university_id": student.university_id,
-            "program": student.program,
-            "profile_picture": student.profile_picture,
-            "bio": student.bio,
-            "github": student.github,
-            "linkedin": student.linkedin,
-            "skills": student.skills,
-            "interests": student.interests,
-            "fyp_status": student.fyp_status
-        })
 
     db.close()
 
-    return result
-
+    return students
 
 @app.get("/students/{student_id}")
 def get_student(student_id: int):
