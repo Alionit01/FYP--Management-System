@@ -2,12 +2,19 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Bell } from "lucide-react";
 import API_URL from "../api";
+import {
+  announceInvitationsChanged,
+  fetchMyInvitations,
+} from "../api/invitations";
 import Alert from "./Alert";
 
 /* Pending team invitations for the signed-in student, with Accept and
    Decline. It fetches /my-invitations itself, so any page can drop it
    in — My Team and My Profile both do. Renders nothing when there is
    nothing to act on, so it never leaves empty space behind.
+
+   After any accept/decline it announces the change so the navbar bell
+   count updates immediately.
 
    `onAccepted(invitation)` lets the host page refresh its own data
    (My Team refetches the team you just joined). */
@@ -17,16 +24,9 @@ function InvitationsSection({ onAccepted, className = "" }) {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch(`${API_URL}/my-invitations`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-      },
-    })
-      .then((response) => (response.ok ? response.json() : []))
-      .then((data) => setInvitations(Array.isArray(data) ? data : []))
-      // A failed load just keeps the section hidden; the host page's
-      // own data is unaffected.
-      .catch(() => setInvitations([]));
+    // A failed load just keeps the section hidden; the host page's
+    // own data is unaffected.
+    fetchMyInvitations().then(setInvitations);
   }, []);
 
   const respondToInvitation = async (invitation, accept) => {
@@ -54,9 +54,21 @@ function InvitationsSection({ onAccepted, className = "" }) {
         );
       }
 
-      setInvitations((current) =>
-        current.filter((item) => item.id !== invitation.id)
-      );
+      if (accept) {
+        // Accepting puts you on a team, which makes every other
+        // pending invitation unactionable — the API hides them all.
+        // Clearing the list here stops the UI from offering a second
+        // "Accept" that would only ever 409.
+        setInvitations([]);
+      } else {
+        // Declining leaves the rest actionable.
+        setInvitations((current) =>
+          current.filter((item) => item.id !== invitation.id)
+        );
+      }
+
+      // Let the navbar bell re-read the count right away.
+      announceInvitationsChanged();
 
       if (accept) onAccepted?.(invitation);
     } catch (err) {

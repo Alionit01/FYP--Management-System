@@ -312,6 +312,19 @@ function MyProfile() {
 
         {!isProfileComplete(profile) && <SetupBanner profile={profile} />}
 
+        {/* Pending invitations first — they're the only time-sensitive
+            action on this page, and the navbar bell links here. Hidden
+            when there's nothing to act on. */}
+        <InvitationsSection
+          className="mb-6"
+          onAccepted={(invitation) => {
+            setError("");
+            setMessage(
+              `You joined ${invitation.team_name}. Open the Teams page to view it.`
+            );
+          }}
+        />
+
         <section className="card p-5 sm:p-8">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-start gap-5">
@@ -418,18 +431,6 @@ function MyProfile() {
             </div>
           </div>
         </section>
-
-        {/* Pending team invitations, with accept/decline. Hidden when
-            there is nothing to act on. */}
-        <InvitationsSection
-          className="mt-6"
-          onAccepted={(invitation) => {
-            setError("");
-            setMessage(
-              `You joined ${invitation.team_name}. Open the Teams page to view it.`
-            );
-          }}
-        />
 
         {message && (
           <div className="mt-6">

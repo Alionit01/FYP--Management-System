@@ -509,9 +509,13 @@ function MyTeam() {
         </div>
       )}
 
-      <InvitationsSection onAccepted={fetchTeam} className="mt-6" />
+      {/* No invitations section here: you're already on a team, and the
+          API hides pending invitations from students who can't act on
+          them, so it would always render empty. The navbar bell and My
+          Profile are where pending invitations surface. */}
 
-      {/* Members */}      <div className="card p-5 sm:p-7 mt-6">
+      {/* Members */}
+      <div className="card p-5 sm:p-7 mt-6">
         <div className="flex items-baseline justify-between mb-5">
           <div>
             <h2 className="display text-xl text-forest-900">

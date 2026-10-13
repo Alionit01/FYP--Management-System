@@ -198,6 +198,45 @@ class SecurityFlowTests(unittest.TestCase):
         with SessionLocal() as db:
             self.assertIsNone(db.query(models.TeamMember).filter_by(student_id=invitee.id).first())
 
+    def test_pending_invitations_hidden_once_student_joins_a_team(self):
+        # A stale invitation (from an owner other than the team the
+        # student eventually joined) must not be offered back as an
+        # actionable "Accept", because accepting it is a guaranteed 409.
+        owner_a = self.verified_student("ownera")
+        owner_b = self.verified_student("ownerb")
+        invitee = self.verified_student("invitee")
+        owner_a, owner_b, invitee = self.complete_profiles(owner_a, owner_b, invitee)
+
+        team_a = main.create_team(TeamCreate(
+            name="Team A", department_preference="Any", spots_available=2
+        ), current_student=owner_a)["team_id"]
+        team_b = main.create_team(TeamCreate(
+            name="Team B", department_preference="Any", spots_available=2
+        ), current_student=owner_b)["team_id"]
+
+        main.invite_team_member(team_a, invitee.id, current_student=owner_a)
+        main.invite_team_member(team_b, invitee.id, current_student=owner_b)
+        self.assertEqual(len(main.get_my_invitations(current_student=invitee)), 2)
+
+        # Join team B; team A's invitation is now unactionable.
+        invitation_b = next(
+            row for row in main.get_my_invitations(current_student=invitee)
+            if row["team_id"] == team_b
+        )
+        main.accept_invitation(invitation_b["id"], current_student=invitee)
+
+        self.assertEqual(main.get_my_invitations(current_student=invitee), [])
+        with SessionLocal() as db:
+            self.assertIsNotNone(
+                db.query(models.TeamMember).filter_by(student_id=invitee.id).first()
+            )
+            # The stale row is still stored, just not surfaced.
+            self.assertIsNotNone(
+                db.query(models.TeamInvitation).filter_by(
+                    student_id=invitee.id, team_id=team_a
+                ).first()
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

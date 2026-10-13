@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Bell, Menu, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import {
+  fetchMyInvitations,
+  INVITATIONS_CHANGED_EVENT,
+} from "../api/invitations";
 import Logo from "./Logo";
 
 function Navbar() {
@@ -9,12 +13,43 @@ function Navbar() {
   const navigate = useNavigate();
   const { isLoggedIn, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [invitationCount, setInvitationCount] = useState(0);
 
   const links = [
     { name: "Home", path: "/" },
     { name: "Students", path: "/students" },
     { name: "Teams", path: "/teams" },
   ];
+
+  // Keep the pending-invitation count fresh: re-read it on every route
+  // change (so it's current after accepting somewhere else) and when a
+  // component announces that invitations changed. fetchMyInvitations
+  // resolves to [] without any request when signed out, so there is no
+  // separate logged-out branch to reset the count.
+  useEffect(() => {
+    let active = true;
+
+    fetchMyInvitations().then((list) => {
+      if (active) setInvitationCount(list.length);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [isLoggedIn, location.pathname]);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    const refresh = () =>
+      fetchMyInvitations().then((list) =>
+        setInvitationCount(list.length)
+      );
+
+    window.addEventListener(INVITATIONS_CHANGED_EVENT, refresh);
+    return () =>
+      window.removeEventListener(INVITATIONS_CHANGED_EVENT, refresh);
+  }, [isLoggedIn]);
 
   // A section counts as active on its own page and its sub-pages
   // (e.g. Teams on /teams/123/edit).
@@ -107,6 +142,31 @@ function Navbar() {
 
             {isLoggedIn ? (
               <>
+                {/* Pending-invitation signal. Shown from md up: below md
+                    the hamburger menu carries a "Team invitations" row
+                    instead, and md is the narrowest width the desktop bar
+                    still has room for it (measured ~115px free at 768 vs
+                    40px needed). */}
+                {invitationCount > 0 && (
+                  <Link
+                    to="/my-profile"
+                    aria-label={`Team invitations, ${invitationCount} pending`}
+                    title={`${invitationCount} pending team invitation${
+                      invitationCount === 1 ? "" : "s"
+                    }`}
+                    className="relative ml-1 hidden md:inline-flex h-9 w-9 items-center justify-center rounded-full text-forest-800 hover:bg-forest-50 transition-colors"
+                  >
+                    <Bell size={18} aria-hidden="true" />
+
+                    <span
+                      aria-hidden="true"
+                      className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-sun-500 text-forest-950 text-[11px] font-bold flex items-center justify-center"
+                    >
+                      {invitationCount}
+                    </span>
+                  </Link>
+                )}
+
                 <Link
                   to="/my-profile"
                   aria-current={
@@ -198,6 +258,21 @@ function Navbar() {
 
               {isLoggedIn ? (
                 <>
+                  {/* Mobile has no room for the bell, so pending
+                      invitations get their own menu row. */}
+                  {invitationCount > 0 && (
+                    <Link
+                      to="/my-profile"
+                      onClick={handleLinkClick}
+                      className="flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium text-forest-900 bg-forest-50 transition-colors hover:bg-forest-100"
+                    >
+                      Team invitations
+                      <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-sun-500 text-forest-950 text-[11px] font-bold">
+                        {invitationCount}
+                      </span>
+                    </Link>
+                  )}
+
                   <Link
                     to="/my-profile"
                     onClick={handleLinkClick}

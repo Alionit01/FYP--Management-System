@@ -1418,6 +1418,16 @@ def invite_team_member(
 def get_my_invitations(current_student: models.Student = Depends(get_current_student)):
     db = database.SessionLocal()
     try:
+        # A student already on a team can never accept another
+        # invitation (accept_invitation returns 409), so hiding the
+        # pending list here keeps the UI from offering a dead-end
+        # "Accept" button. Stale invitations left over from before they
+        # joined a team are simply not surfaced.
+        if db.query(models.TeamMember).filter(
+            models.TeamMember.student_id == current_student.id
+        ).first():
+            return []
+
         rows = db.query(models.TeamInvitation, models.Team).join(
             models.Team, models.Team.id == models.TeamInvitation.team_id
         ).filter(models.TeamInvitation.student_id == current_student.id).all()
