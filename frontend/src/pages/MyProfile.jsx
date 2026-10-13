@@ -17,6 +17,7 @@ import { useAuth } from "../context/AuthContext";
 import { isProfileComplete } from "../profile";
 import Alert from "../components/Alert";
 import Avatar from "../components/Avatar";
+import InvitationsSection from "../components/InvitationsSection";
 import Tags from "../components/Tags";
 
 /* Checklist shown while a profile is still incomplete. Status is
@@ -417,6 +418,18 @@ function MyProfile() {
             </div>
           </div>
         </section>
+
+        {/* Pending team invitations, with accept/decline. Hidden when
+            there is nothing to act on. */}
+        <InvitationsSection
+          className="mt-6"
+          onAccepted={(invitation) => {
+            setError("");
+            setMessage(
+              `You joined ${invitation.team_name}. Open the Teams page to view it.`
+            );
+          }}
+        />
 
         {message && (
           <div className="mt-6">

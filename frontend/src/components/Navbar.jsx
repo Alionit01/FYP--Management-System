@@ -101,25 +101,12 @@ function Navbar() {
             })}
 
             <span
-              className="w-px h-5 bg-forest-900/15 mx-2"
+              className="w-px h-5 bg-forest-900/15 mx-3"
               aria-hidden="true"
             />
 
             {isLoggedIn ? (
               <>
-                <Link
-                  to="/my-team"
-                  aria-current={
-                    isActive("/my-team") ? "page" : undefined
-                  }
-                  className={linkClass(
-                    isActive("/my-team"),
-                    "text-sm font-medium px-3.5 py-2 rounded-full transition-colors"
-                  )}
-                >
-                  My Team
-                </Link>
-
                 <Link
                   to="/my-profile"
                   aria-current={
@@ -136,18 +123,24 @@ function Navbar() {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="secondary-button ml-2 !py-2"
+                  className="secondary-button ml-3 !py-2"
                 >
                   Logout
                 </button>
               </>
             ) : (
               <>
-                <Link to="/register" className="link-quiet px-3 py-2">
+                {/* Account actions get a touch more padding and weight
+                    than the nav links so the two groups read as
+                    separate, balanced clusters. */}
+                <Link
+                  to="/register"
+                  className="px-4 py-2 rounded-full text-sm font-semibold text-forest-800 transition-colors hover:bg-forest-50 hover:text-forest-900"
+                >
                   Create account
                 </Link>
 
-                <Link to="/login" className="primary-button ml-1 !py-2">
+                <Link to="/login" className="primary-button ml-2 !py-2">
                   Sign in
                 </Link>
               </>
@@ -205,18 +198,6 @@ function Navbar() {
 
               {isLoggedIn ? (
                 <>
-                  <Link
-                    to="/my-team"
-                    onClick={handleLinkClick}
-                    className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
-                      isActive("/my-team")
-                        ? "bg-forest-100 text-forest-900"
-                        : "text-ink-soft hover:bg-forest-50 hover:text-forest-900"
-                    }`}
-                  >
-                    My Team
-                  </Link>
-
                   <Link
                     to="/my-profile"
                     onClick={handleLinkClick}

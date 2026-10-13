@@ -7,49 +7,43 @@ import {
   Users,
 } from "lucide-react";
 
-/* Decorative shapes behind the hero. Purely visual, so everything in
-   this block is hidden from assistive technology. */
-function HeroShapes() {
+/* Ambient backdrop for the hero: two soft blurred gradients and a
+   faint grid that dissolves before it reaches the text. No floating
+   shapes, nothing that competes with the copy. Purely visual, so it
+   is hidden from assistive technology. */
+function HeroBackdrop() {
   return (
     <div
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 overflow-hidden"
     >
-      {/* Soft dot field */}
-      <div className="pattern-dots absolute -top-4 right-0 h-72 w-[42%] rounded-full blur-[0.2px]" />
+      {/* Warm light spilling in from the top-left corner */}
+      <div className="absolute -top-40 -left-32 h-[30rem] w-[30rem] rounded-full bg-forest-100/70 blur-3xl" />
 
-      {/* Warm sun */}
-      <div className="absolute -top-10 -left-12 h-40 w-40 rounded-full bg-sun-100" />
-      <div className="absolute top-24 -left-4 h-14 w-14 rounded-full border-2 border-dashed border-forest-700/30" />
+      {/* Cooler glow balancing the card stack on the right */}
+      <div className="absolute -right-40 top-8 h-[26rem] w-[26rem] rounded-full bg-sun-100/60 blur-3xl" />
 
-      {/* Sky tile */}
-      <div className="absolute bottom-16 left-[46%] h-16 w-16 rotate-12 rounded-2xl bg-sky-100" />
-
-      {/* Blush blob */}
-      <svg
-        className="absolute -bottom-6 -right-8 h-56 w-56 text-blush-100"
-        viewBox="0 0 200 200"
-        fill="currentColor"
-      >
-        <path d="M43.9 -67.2C56.3 -58.3 65.5 -45.3 71.2 -30.9C76.9 -16.6 79.1 -0.8 75.9 13.2C72.7 27.2 64.1 39.5 52.6 49.8C41.1 60.1 26.7 68.4 11.2 72.9C-4.3 77.4 -20.9 78.1 -35.3 72.4C-49.7 66.7 -61.9 54.6 -69.4 39.9C-76.9 25.2 -79.7 7.9 -76.9 -8.1C-74.1 -24.1 -65.7 -38.8 -53.6 -47.9C-41.5 -57 -25.7 -60.5 -10.3 -64.1C5.1 -67.7 31.5 -76.1 43.9 -67.2Z" transform="translate(100 100)" />
-      </svg>
-
-      {/* Grid patch */}
-      <div className="pattern-grid absolute bottom-4 left-6 h-32 w-48 rounded-xl" />
+      {/* Clean grid lines, masked so they fade out toward the content */}
+      <div className="pattern-grid absolute inset-x-0 top-0 h-[26rem] [-webkit-mask-image:radial-gradient(ellipse_75%_80%_at_72%_18%,#000,transparent_72%)] [mask-image:radial-gradient(ellipse_75%_80%_at_72%_18%,#000,transparent_72%)]" />
     </div>
   );
 }
 
 /* Static, clearly illustrative preview of the two card types on the
-   site. Hidden from screen readers — it shows no real data. */
+   site. Hidden from screen readers — it shows no real data.
+
+   The cards sit in normal document flow (offset with margins, not
+   absolute positioning) so nothing is clipped, truncated or pushed
+   off-screen at any width. Small rotations keep the sticker feel. */
 function HeroPreview() {
   return (
-    <div aria-hidden="true" className="relative mx-auto w-full max-w-md pb-10 pt-8">
-      {/* Skills-needed chip, tucked behind the team card */}
-      <div className="card animate-rise delay-3 absolute -top-1 right-2 z-10 rotate-3 px-4 py-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-forest-700">
-          Needs
-        </p>
+    <div aria-hidden="true" className="relative mx-auto w-full max-w-md">
+      {/* Soft glow separating the stack from the cream page */}
+      <div className="pointer-events-none absolute -inset-6 -z-10 rounded-[3rem] bg-gradient-to-br from-forest-100/60 via-transparent to-sun-100/50 blur-2xl" />
+
+      {/* Skills still needed — right-aligned above the team card */}
+      <div className="animate-rise delay-3 card ml-auto w-fit max-w-full rotate-2 px-4 py-3">
+        <p className="eyebrow">Needs</p>
 
         <p className="mt-1 text-sm font-medium text-ink">
           Frontend · UI/UX
@@ -57,7 +51,7 @@ function HeroPreview() {
       </div>
 
       {/* Team card */}
-      <div className="card animate-rise delay-1 relative z-20 w-[94%] p-5 sm:p-6 shadow-pop rotate-[1.5deg]">
+      <div className="animate-rise delay-1 card shadow-pop mt-5 -rotate-[0.6deg] p-5 sm:p-6">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="eyebrow">Team</p>
@@ -86,10 +80,10 @@ function HeroPreview() {
         </div>
       </div>
 
-      {/* Student sticker, overlapping the front bottom-left corner */}
-      <div className="card animate-rise delay-2 card-hover absolute -bottom-2 -left-1 sm:-left-6 z-30 w-52 rotate-[-4deg] p-4">
+      {/* Student sticker, tucked under the bottom-left of the stack */}
+      <div className="animate-rise delay-2 card card-hover mt-5 w-full max-w-[16rem] -rotate-2 p-4 sm:-ml-3">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-forest-100 text-forest-800 flex items-center justify-center font-semibold">
+          <div className="h-10 w-10 shrink-0 rounded-full bg-forest-100 text-forest-800 flex items-center justify-center font-semibold">
             S
           </div>
 
@@ -104,10 +98,6 @@ function HeroPreview() {
 
         <p className="tag tag-sand mt-3">Looking for a team</p>
       </div>
-
-      {/* Floating accents */}
-      <div className="absolute -right-4 top-1/3 h-8 w-8 rounded-full bg-sun-300" />
-      <div className="absolute -left-6 bottom-1/4 h-5 w-5 rotate-45 rounded-sm bg-forest-200" />
     </div>
   );
 }
@@ -140,12 +130,12 @@ function Home() {
       {/* Hero                                                              */}
       {/* ---------------------------------------------------------------- */}
       <section className="relative overflow-hidden">
-        <HeroShapes />
+        <HeroBackdrop />
 
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-14 pb-16 md:pt-20 md:pb-24">
           <div className="grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
             <div>
-              <p className="eyebrow animate-rise">
+              <p className="eyebrow-badge animate-rise">
                 Final-year project teams
               </p>
 
@@ -161,13 +151,16 @@ function Home() {
                 final-year project deserves.
               </p>
 
+              {/* Primary CTA is the only filled button in the hero, so
+                  the eye lands on it first; secondary stays a solid,
+                  bordered surface that reads clearly on cream. */}
               <div className="animate-rise delay-3 mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link to="/students" className="primary-button !px-6 !py-3">
+                <Link to="/students" className="primary-button px-6 py-3">
                   <Search size={17} aria-hidden="true" />
                   Find students
                 </Link>
 
-                <Link to="/teams" className="secondary-button !px-6 !py-3">
+                <Link to="/teams" className="secondary-button px-6 py-3">
                   <Compass size={17} aria-hidden="true" />
                   Explore teams
                 </Link>

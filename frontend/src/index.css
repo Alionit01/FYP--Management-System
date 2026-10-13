@@ -33,6 +33,13 @@
   --color-forest-900: #0c3723;
   --color-forest-950: #062315;
 
+  /* Brand green — primary calls to action -------------------------- */
+  /* Deliberately distinct from the forest scale: the filled primary
+     button needs maximum contrast against the cream canvas. */
+  --color-brand-600: #0d5c3a;
+  --color-brand-700: #0a4a2f;
+  --color-brand-800: #07361f;
+
   /* Ink ------------------------------------------------------------ */
   --color-ink: #14251c;
   --color-ink-soft: #40544a;
@@ -192,6 +199,21 @@ textarea:focus-visible,
   @apply inline-block h-[2px] w-5 rounded-full bg-sun-500;
 }
 
+/* Pill variant: same label treatment, but with no leading rule so the
+   text sits flush with the headline's left edge. Use it when the label
+   and the heading below it must align exactly (landing hero). */
+.eyebrow-badge {
+  @apply inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5
+    text-[0.7rem] font-semibold uppercase tracking-[0.16em]
+    border-forest-900/12 bg-forest-50 text-forest-800
+    shadow-hairline;
+}
+
+.eyebrow-badge::before {
+  content: "";
+  @apply inline-block h-1.5 w-1.5 rounded-full bg-sun-500;
+}
+
 /* Card: warm paper surface, forest hairline, soft elevation. */
 .card {
   background: var(--color-paper);
@@ -228,18 +250,18 @@ textarea:focus-visible,
     text-sm font-semibold px-5 py-2.5 border border-transparent
     transition-[background-color,color,box-shadow,transform,border-color]
     duration-200 select-none;
-  background: var(--color-forest-700);
+  background: var(--color-brand-600);
   color: var(--color-cream-50);
   box-shadow: var(--shadow-hairline);
 }
 
 .primary-button:hover:not(:disabled) {
-  background: var(--color-forest-800);
+  background: var(--color-brand-700);
   transform: translateY(-1px);
 }
 
 .primary-button:active:not(:disabled) {
-  background: var(--color-forest-900);
+  background: var(--color-brand-800);
   transform: translateY(0);
 }
 
@@ -248,19 +270,21 @@ textarea:focus-visible,
   transform: none;
 }
 
+/* Secondary: a solid, quiet surface that still reads clearly as a
+   button on the cream page — not a near-invisible outline. */
 .secondary-button {
   @apply inline-flex items-center justify-center gap-2 rounded-full
     text-sm font-semibold px-5 py-2.5 border border-transparent
     transition-[background-color,color,box-shadow,transform,border-color]
     duration-200 select-none;
-  background: var(--color-paper);
+  background: var(--color-cream-100);
   color: var(--color-forest-900);
-  border-color: color-mix(in srgb, var(--color-forest-900) 22%, transparent);
+  border-color: color-mix(in srgb, var(--color-forest-900) 30%, transparent);
 }
 
 .secondary-button:hover:not(:disabled) {
   background: var(--color-forest-50);
-  border-color: color-mix(in srgb, var(--color-forest-700) 45%, transparent);
+  border-color: color-mix(in srgb, var(--color-forest-700) 55%, transparent);
 }
 
 .secondary-button:active:not(:disabled) {

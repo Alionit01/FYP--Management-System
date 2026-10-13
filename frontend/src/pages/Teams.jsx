@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Compass, Plus, RotateCw, Search, SlidersHorizontal } from "lucide-react";
+import { Compass, Plus, RotateCw, Search, SlidersHorizontal, Users } from "lucide-react";
 import API_URL from "../api";
 import { useAuth } from "../context/AuthContext";
 import Alert from "../components/Alert";
@@ -152,21 +152,39 @@ function Teams() {
           </p>
         </div>
 
-        <Link
-          to={isLoggedIn ? "/teams/create" : "/login"}
-          state={
-            isLoggedIn
-              ? undefined
-              : {
-                  from: { pathname: "/teams/create" },
-                  message: "Sign in to create a team.",
-                }
-          }
-          className="primary-button shrink-0"
-        >
-          <Plus size={17} aria-hidden="true" />
-          Create Team
-        </Link>
+        <div className="flex flex-col sm:flex-row gap-3 sm:shrink-0">
+          <Link
+            to={isLoggedIn ? "/my-team" : "/login"}
+            state={
+              isLoggedIn
+                ? undefined
+                : {
+                    from: { pathname: "/my-team" },
+                    message: "Sign in to view your team.",
+                  }
+            }
+            className="secondary-button"
+          >
+            <Users size={17} aria-hidden="true" />
+            My Team
+          </Link>
+
+          <Link
+            to={isLoggedIn ? "/teams/create" : "/login"}
+            state={
+              isLoggedIn
+                ? undefined
+                : {
+                    from: { pathname: "/teams/create" },
+                    message: "Sign in to create a team.",
+                  }
+            }
+            className="primary-button"
+          >
+            <Plus size={17} aria-hidden="true" />
+            Create Team
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}

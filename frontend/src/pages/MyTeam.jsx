@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
-  Bell,
   Trash2,
   UserMinus,
   UserPlus,
@@ -12,6 +11,7 @@ import API_URL from "../api";
 import Alert from "../components/Alert";
 import Avatar from "../components/Avatar";
 import ConfirmDialog from "../components/ConfirmDialog";
+import InvitationsSection from "../components/InvitationsSection";
 import Tags from "../components/Tags";
 
 const MAX_TEAM_MEMBERS = 4;
@@ -22,7 +22,6 @@ function MyTeam() {
   const [team, setTeam] = useState(null);
   const [members, setMembers] = useState([]);
   const [students, setStudents] = useState([]);
-  const [invitations, setInvitations] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState("");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -80,34 +79,7 @@ function MyTeam() {
 
   useEffect(() => {
     fetchTeam();
-    fetch(`${API_URL}/my-invitations`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` },
-    })
-      .then((response) => response.ok ? response.json() : [])
-      .then(setInvitations)
-      .catch(() => setInvitations([]));
   }, []);
-
-  const respondToInvitation = async (invitationId, accept) => {
-    setError("");
-    try {
-      const response = await fetch(
-        `${API_URL}/invitations/${invitationId}${accept ? "/accept" : ""}`,
-        {
-          method: accept ? "POST" : "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(typeof data.detail === "string" ? data.detail : "Could not respond to invitation.");
-      }
-      setInvitations((current) => current.filter((item) => item.id !== invitationId));
-      if (accept) await fetchTeam();
-    } catch (err) {
-      setError(err.message);
-    }
-  };
 
   const handleLeaveTeam = async () => {
     setMessage("");
@@ -308,52 +280,6 @@ function MyTeam() {
     }
   }, [isOwner]);
 
-  // Pending invitations are actionable whether or not you already have a
-  // team, so this block is rendered in both branches below.
-  const invitationsSection =
-    invitations.length > 0 ? (
-      <section className="card p-5 sm:p-7 mt-6">
-        <div className="flex items-center gap-2">
-          <Bell size={18} aria-hidden="true" className="text-forest-700" />
-
-          <h2 className="display text-xl text-forest-900">
-            Team invitations
-          </h2>
-        </div>
-
-        <ul className="mt-5 space-y-3">
-          {invitations.map((invitation) => (
-            <li
-              key={invitation.id}
-              className="flex items-center justify-between gap-3 flex-wrap rounded-xl border border-forest-900/12 bg-cream-50 p-4"
-            >
-              <span className="font-medium text-forest-900">
-                {invitation.team_name}
-              </span>
-
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="primary-button !py-2"
-                  onClick={() => respondToInvitation(invitation.id, true)}
-                >
-                  Accept
-                </button>
-
-                <button
-                  type="button"
-                  className="secondary-button !py-2"
-                  onClick={() => respondToInvitation(invitation.id, false)}
-                >
-                  Decline
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
-    ) : null;
-
   if (loading) {
     return (
       <main className="page-container max-w-4xl">
@@ -374,7 +300,7 @@ function MyTeam() {
     );
   }
 
-  if (error && !team && invitations.length === 0) {
+  if (error && !team) {
     return (
       <div className="page-container max-w-4xl">
         <button
@@ -387,6 +313,10 @@ function MyTeam() {
         </button>
 
         <Alert kind="error">{error}</Alert>
+
+        {/* Accepting an invitation still lets you recover from a
+            failed team fetch. */}
+        <InvitationsSection onAccepted={fetchTeam} className="mt-6" />
       </div>
     );
   }
@@ -442,7 +372,7 @@ function MyTeam() {
           </div>
         )}
 
-        {invitationsSection}
+        <InvitationsSection onAccepted={fetchTeam} className="mt-6" />
       </div>
     );
   }
@@ -579,10 +509,9 @@ function MyTeam() {
         </div>
       )}
 
-      {invitationsSection}
+      <InvitationsSection onAccepted={fetchTeam} className="mt-6" />
 
-      {/* Members */}
-      <div className="card p-5 sm:p-7 mt-6">
+      {/* Members */}      <div className="card p-5 sm:p-7 mt-6">
         <div className="flex items-baseline justify-between mb-5">
           <div>
             <h2 className="display text-xl text-forest-900">
