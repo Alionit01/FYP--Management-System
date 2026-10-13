@@ -51,6 +51,12 @@ class StudentCreate(BaseModel):
     email: EmailStr
     program: str
 
+    # Only used when the supervised pilot is enabled (see
+    # pilot_onboarding_enabled in app/main.py). Ignored by the
+    # normal email-verification flow, which sets the password at
+    # verification time instead.
+    password: Optional[str] = Field(default=None, max_length=72)
+
     profile_picture: Optional[str] = None
     bio: Optional[str] = Field(default=None, max_length=1000)
     github: Optional[str] = None
@@ -70,6 +76,18 @@ class StudentCreate(BaseModel):
     @classmethod
     def _check_picture(cls, v):
         return _validate_picture(v)
+
+    @field_validator("password")
+    @classmethod
+    def _check_password(cls, v):
+        # Pilot-only field: same policy as VerificationRequest.
+        if v is None:
+            return v
+        if len(v) < 6:
+            raise ValueError("Password must be at least 6 characters")
+        if len(v.encode("utf-8")) > 72:
+            raise ValueError("Password must be at most 72 bytes (UTF-8)")
+        return v
 
 
 class TeamCreate(BaseModel):

@@ -91,6 +91,22 @@ FYP_STATUSES = {
 TEAM_DEPARTMENT_OPTIONS = PROGRAMS | {"Any"}
 
 
+# Temporary supervised-pilot onboarding. OFF by default and
+# fail-closed: a missing, empty, or unrecognized value keeps
+# the normal email-verification flow. Enable only for the
+# in-person pilot by setting PILOT_ONBOARDING_ENABLED=true.
+_PILOT_ON_VALUES = {"true", "1", "yes", "on"}
+
+
+def pilot_onboarding_enabled() -> bool:
+    return (
+        os.getenv("PILOT_ONBOARDING_ENABLED", "")
+        .strip()
+        .lower()
+        in _PILOT_ON_VALUES
+    )
+
+
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
@@ -115,6 +131,19 @@ try:
             "ALTER TABLE students ADD COLUMN IF NOT EXISTS "
             "profile_completed BOOLEAN NOT NULL DEFAULT TRUE"
         ))
+        # Authorization role. Existing students are grandfathered as
+        # 'student' by the DEFAULT; nothing is ever auto-promoted to
+        # 'admin' here — the only promotion path is scripts/make_admin.py.
+        conn.execute(text(
+            "ALTER TABLE students ADD COLUMN IF NOT EXISTS "
+            "role VARCHAR NOT NULL DEFAULT 'student'"
+        ))
+        # Temporary pilot marker. Existing rows stay FALSE: the
+        # migration never flags or verifies any account.
+        conn.execute(text(
+            "ALTER TABLE students ADD COLUMN IF NOT EXISTS "
+            "pilot_account BOOLEAN NOT NULL DEFAULT FALSE"
+        ))
 except Exception:
     pass
 
@@ -127,6 +156,13 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/pilot-status")
+def pilot_status():
+    # Public, non-secret flag so the frontend can explain the
+    # pilot registration flow. Reveals nothing about accounts.
+    return {"pilot_onboarding": pilot_onboarding_enabled()}
 
 
 @app.middleware("http")
@@ -192,7 +228,61 @@ def create_student(student: StudentCreate):
         ).first():
             raise HTTPException(status_code=400, detail="Email or university ID already registered")
 
-        data = student.model_dump()
+        if pilot_onboarding_enabled():
+            # Supervised pilot: create the account immediately so
+            # students can register and sign in without email
+            # delivery. The account stays UNVERIFIED
+            # (email_verified=False) — the pilot never verifies an
+            # email address — and the login policy below admits it
+            # only while the pilot flag is explicitly enabled.
+            if not student.password:
+                raise HTTPException(
+                    status_code=400,
+                    detail="A password is required to create your account"
+                )
+            # Stricter than the normal flow: during the pilot any
+            # existing row (verified or not) blocks re-registration,
+            # so an account cannot be duplicated or overwritten by
+            # re-registering with the same email or university ID.
+            if db.query(models.Student).filter(
+                (models.Student.email == email) |
+                (func.lower(models.Student.university_id) == student.university_id.strip().lower())
+            ).first():
+                raise HTTPException(status_code=400, detail="Email or university ID already registered")
+
+            new_student = models.Student(
+                name=student.name,
+                email=email,
+                university_id=student.university_id.strip().upper(),
+                program=student.program,
+                fyp_status=student.fyp_status,
+                password=hash_password(student.password),
+                email_verified=False,
+                pilot_account=True,
+            )
+            db.add(new_student)
+            try:
+                db.commit()
+            except IntegrityError:
+                db.rollback()
+                raise HTTPException(
+                    status_code=409,
+                    detail="Email or university ID already registered"
+                )
+            db.refresh(new_student)
+
+            # Sign the student in immediately (same token shape as
+            # /login) so the QR-code flow is one step.
+            return {
+                "message": "Pilot account created. You are signed in.",
+                "access_token": create_access_token(new_student.id),
+                "token_type": "bearer",
+                "student_id": new_student.id,
+            }
+
+        # The pilot-only password field must never be
+        # persisted: pending registrations hold no password.
+        data = student.model_dump(exclude={"password"})
         data["email"] = email
         data["university_id"] = student.university_id.strip().upper()
         pending = models.PendingRegistration(
@@ -256,6 +346,10 @@ def verify_email(request: VerificationRequest):
                 setattr(existing[0], field, value)
             existing[0].email_verified = True
             existing[0].verification_token = None
+            # A pilot account reclaimed through the normal
+            # verification flow becomes a regular verified
+            # account; the pilot marker is cleared.
+            existing[0].pilot_account = False
         else:
             db.add(models.Student(**data, email_verified=True))
         db.delete(pending)
@@ -335,10 +429,26 @@ def login(student: StudentLogin, request: Request):
             )
 
         if not user.email_verified:
-            raise HTTPException(
-                status_code=403,
-                detail="Please verify your email before logging in"
-            )
+            # Supervised pilot policy: a pilot account may sign in
+            # only while the pilot is explicitly enabled. When the
+            # pilot ends (flag off) it is treated like any other
+            # unverified account until the normal email-verification
+            # flow completes for that mailbox.
+            if user.pilot_account and pilot_onboarding_enabled():
+                pass
+            elif user.pilot_account:
+                raise HTTPException(
+                    status_code=403,
+                    detail=(
+                        "Pilot sign-in has ended. Complete email "
+                        "verification to keep using FYP Finder."
+                    )
+                )
+            else:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Please verify your email before logging in"
+                )
 
         token = create_access_token(user.id)
 

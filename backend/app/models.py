@@ -12,6 +12,15 @@ from sqlalchemy import (
 from .database import Base
 
 
+# Application-controlled roles. The role column is written only by this
+# application: request payloads never carry a role (StudentCreate has no
+# role field and Pydantic ignores unknown keys), and the sole promotion
+# path is the one-time bootstrap script scripts/make_admin.py.
+ADMIN_ROLE = "admin"
+STUDENT_ROLE = "student"
+VALID_ROLES = {STUDENT_ROLE, ADMIN_ROLE}
+
+
 class Student(Base):
     __tablename__ = "students"
 
@@ -33,6 +42,17 @@ class Student(Base):
         Boolean, nullable=False, default=False
     )
     verification_token = Column(String, nullable=True)
+    # Authorization role; existing and new accounts default to
+    # 'student'. Never accept this from a request payload; the only
+    # 'admin' writer is scripts/make_admin.py (see VALID_ROLES).
+    role = Column(
+        String,
+        nullable=False,
+        default=STUDENT_ROLE,
+        # SQLAlchemy quotes plain-string server_defaults itself, so this
+        # renders as DEFAULT 'student' in DDL.
+        server_default=STUDENT_ROLE,
+    )
     # New accounts start incomplete; the startup migration backfills
     # existing rows as TRUE (server_default), grandfathering them.
     profile_completed = Column(
@@ -40,6 +60,19 @@ class Student(Base):
         nullable=False,
         default=False,
         server_default="true",
+    )
+    # Temporary supervised-pilot marker (see pilot_onboarding_enabled
+    # in app/main.py). Pilot accounts are created UNVERIFIED:
+    # email_verified is never set by the pilot path, so this flag
+    # only records the signup route. The login policy in main.py
+    # gates pilot accounts on the flag being explicitly enabled.
+    # Request payloads never carry this field (StudentCreate has no
+    # such key and Pydantic ignores unknown keys).
+    pilot_account = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
     )
 
 class PendingRegistration(Base):

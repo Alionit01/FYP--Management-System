@@ -1,20 +1,45 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { MailCheck, UserPlus } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { isProfileComplete } from "../profile";
 import API_URL from "../api";
 import Alert from "../components/Alert";
 
 function Register() {
   const navigate = useNavigate();
+  const { login, setProfileComplete } = useAuth();
 
   const [form, setForm] = useState({
     name: "",
     university_id: "",
     email: "",
     program: "BSCS",
+    password: "",
   });
+  // null = checking pilot status, true/false once known
+  const [pilot, setPilot] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch(`${API_URL}/pilot-status`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (!cancelled) {
+          setPilot(Boolean(data?.pilot_onboarding));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setPilot(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleChange = (e) => {
     setForm({
@@ -31,6 +56,23 @@ function Register() {
     setLoading(true);
 
     try {
+      // The password is only sent during the supervised pilot,
+      // where accounts are created without email delivery.
+      const body = pilot
+        ? {
+            name: form.name,
+            university_id: form.university_id,
+            email: form.email,
+            program: form.program,
+            password: form.password,
+          }
+        : {
+            name: form.name,
+            university_id: form.university_id,
+            email: form.email,
+            program: form.program,
+          };
+
       const response = await fetch(
         `${API_URL}/students`,
         {
@@ -38,7 +80,7 @@ function Register() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(form),
+          body: JSON.stringify(body),
         }
       );
 
@@ -52,6 +94,33 @@ function Register() {
               ? data.detail[0].msg
               : "Could not create your account."
         );
+        return;
+      }
+
+      if (pilot && data.access_token) {
+        // Pilot accounts are signed in immediately.
+        login(data.access_token, data.student_id);
+
+        try {
+          const profileRes = await fetch(`${API_URL}/my-profile`, {
+            headers: { Authorization: `Bearer ${data.access_token}` },
+          });
+
+          if (profileRes.ok) {
+            const profileData = await profileRes.json();
+            const complete = isProfileComplete(profileData);
+            setProfileComplete(complete);
+
+            if (!complete) {
+              navigate("/my-profile", { replace: true });
+              return;
+            }
+          }
+        } catch {
+          // Network hiccup: fall through to the normal redirect.
+        }
+
+        navigate("/", { replace: true });
         return;
       }
 
@@ -89,21 +158,39 @@ function Register() {
             classmates.
           </p>
 
-          <div className="mt-8 card max-w-md p-5">
-            <div className="flex items-start gap-3">
-              <MailCheck
-                size={19}
-                aria-hidden="true"
-                className="mt-0.5 shrink-0 text-forest-700"
-              />
+          {pilot ? (
+            <div className="mt-8 card max-w-md p-5">
+              <div className="flex items-start gap-3">
+                <UserPlus
+                  size={19}
+                  aria-hidden="true"
+                  className="mt-0.5 shrink-0 text-forest-700"
+                />
 
-              <p className="text-sm text-ink-soft leading-relaxed">
-                We will email you a confirmation link. Open it, set your
-                password, and your account is ready — it takes about a
-                minute.
-              </p>
+                <p className="text-sm text-ink-soft leading-relaxed">
+                  Supervised pilot: email verification is temporarily
+                  unavailable. Your account is created unverified and you
+                  can sign in right away with the password you choose.
+                </p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="mt-8 card max-w-md p-5">
+              <div className="flex items-start gap-3">
+                <MailCheck
+                  size={19}
+                  aria-hidden="true"
+                  className="mt-0.5 shrink-0 text-forest-700"
+                />
+
+                <p className="text-sm text-ink-soft leading-relaxed">
+                  We will email you a confirmation link. Open it, set your
+                  password, and your account is ready — it takes about a
+                  minute.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Form */}
@@ -118,8 +205,9 @@ function Register() {
             </h1>
 
             <p className="mt-3 text-ink-soft">
-              Use your university email to join FYP Finder. You will set
-              your password after confirming the email link.
+              {pilot
+                ? "Use your university email to join FYP Finder. Email verification is temporarily unavailable during the supervised pilot, so create a password to sign in now."
+                : "Use your university email to join FYP Finder. You will set your password after confirming the email link."}
             </p>
           </div>
 
@@ -218,6 +306,36 @@ function Register() {
                   the @.
                 </p>
               </div>
+
+              {pilot && (
+                <div>
+                  <label
+                    htmlFor="password"
+                    className="block text-sm font-medium text-ink-soft mb-2"
+                  >
+                    Password *
+                  </label>
+
+                  <input
+                    id="password"
+                    type="password"
+                    name="password"
+                    value={form.password}
+                    onChange={handleChange}
+                    required
+                    minLength={6}
+                    maxLength={72}
+                    autoComplete="new-password"
+                    placeholder="At least 6 characters"
+                    className="input-field"
+                  />
+
+                  <p className="text-xs text-ink-muted mt-2">
+                    Your account is created unverified for the pilot. You
+                    can sign in with this password immediately.
+                  </p>
+                </div>
+              )}
             </div>
 
             {error && (

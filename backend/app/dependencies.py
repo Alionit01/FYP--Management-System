@@ -69,3 +69,22 @@ def get_current_student(
         )
 
     return student
+
+
+def get_current_admin(
+    current_student=Depends(get_current_student),
+):
+    """Require the current token holder to be an administrator.
+
+    The role is read from the database on every request (not from the
+    JWT), so granting or revoking 'admin' takes effect immediately
+    without reissuing tokens. Students get 403; missing/invalid
+    credentials are rejected earlier with 401 by get_current_student.
+    """
+    if current_student.role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Administrator access required"
+        )
+
+    return current_student

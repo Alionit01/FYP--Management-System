@@ -148,12 +148,17 @@ function Students() {
 
   // Persist filters in the URL so results are shareable and Back works.
   useEffect(() => {
+    // Signed-out visitors are being sent to /login below; rewriting the
+    // query string here would replace that navigation and strand them on
+    // this page with the loading skeleton.
+    if (!token) return;
+
     const params = {};
     if (search !== "") params.search = search;
     if (program !== "All") params.program = program;
     if (status !== "All") params.status = status;
     setSearchParams(params, { replace: true });
-  }, [search, program, status, setSearchParams]);
+  }, [token, search, program, status, setSearchParams]);
 
   const filtersActive =
     search !== "" || program !== "All" || status !== "All";
