@@ -14,7 +14,11 @@ function TeamProfile() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API_URL}/teams/${id}`)
+    const token = localStorage.getItem("access_token");
+
+    fetch(`${API_URL}/teams/${id}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
       .then((response) => {
         if (!response.ok) {
           throw new Error("Unable to load team");

@@ -85,6 +85,56 @@ class PasswordResetTests(unittest.TestCase):
         self.assertEqual(response["message"], "If that email is registered, a password reset link has been sent.")
         self.assertEqual(len(self.emails), 0)
 
+    def test_forgot_password_send_failure_does_not_leak_account_existence(self):
+        # A delivery failure for a registered email must produce the
+        # same generic response as an unregistered email; a distinct
+        # error (previously 503) would confirm the account exists.
+        self.verified_student()
+        with patch.object(
+            main, "send_password_reset_email",
+            side_effect=RuntimeError("Email provider rejected the message"),
+        ):
+            registered = main.forgot_password(
+                PasswordResetRequest(email="alice@iqra.edu.pk")
+            )
+        self.assertEqual(
+            registered["message"],
+            "If that email is registered, a password reset link has been sent.",
+        )
+
+        # No usable reset token is left behind after a failed send.
+        with SessionLocal() as db:
+            self.assertEqual(db.query(models.PasswordResetToken).count(), 0)
+
+        # The unregistered case still behaves identically.
+        with patch.object(
+            main, "send_password_reset_email",
+            side_effect=RuntimeError("Email provider rejected the message"),
+        ):
+            unregistered = main.forgot_password(
+                PasswordResetRequest(email="ghost@iqra.edu.pk")
+            )
+        self.assertEqual(unregistered, registered)
+
+    def test_forgot_password_survives_provider_failure_then_retry(self):
+        # After a failed attempt, a later successful request still
+        # issues a working reset link (legitimate resets keep working).
+        self.verified_student()
+        with patch.object(
+            main, "send_password_reset_email",
+            side_effect=RuntimeError("provider down"),
+        ):
+            first = main.forgot_password(
+                PasswordResetRequest(email="alice@iqra.edu.pk")
+            )
+        second = main.forgot_password(
+            PasswordResetRequest(email="alice@iqra.edu.pk")
+        )
+        self.assertEqual(first["message"], second["message"])
+        token = self.emails[-1][2]
+        result = main.reset_password(PasswordReset(token=token, password="newpass123"))
+        self.assertIn("Password updated", result["message"])
+
     def test_new_request_invalidates_previous_token(self):
         self.verified_student()
         main.forgot_password(PasswordResetRequest(email="alice@iqra.edu.pk"))

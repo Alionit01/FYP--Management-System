@@ -378,14 +378,16 @@ def forgot_password(request: schemas.PasswordResetRequest):
             try:
                 send_password_reset_email(student.email, token)
             except Exception:
+                # Delivery failed. Discard the token and answer with
+                # the same generic message used for every request:
+                # a delivery-specific error (e.g. 503) would only
+                # be reachable for registered accounts and would
+                # reveal that the email exists. The student can
+                # simply request a new link.
                 db.query(models.PasswordResetToken).filter(
                     models.PasswordResetToken.student_id == student.id
                 ).delete()
                 db.commit()
-                raise HTTPException(
-                    status_code=503,
-                    detail="Could not send password reset email",
-                ) from None
     finally:
         db.close()
 
@@ -1027,7 +1029,15 @@ def get_teams(skip: int = 0, limit: int = 50):
     return result
 
 @app.get("/teams/{team_id}")
-def get_team(team_id: int):
+def get_team(
+    team_id: int,
+    current_student=Depends(get_current_student),
+):
+    # Member names, programs, university IDs and profile pictures
+    # are student information: anonymous requests are rejected by
+    # get_current_student before any data is read (401). Any signed
+    # in student may browse team details, mirroring the student
+    # directory; contact details stay protected separately.
 
     db = database.SessionLocal()
 
@@ -1084,7 +1094,12 @@ def get_team(team_id: int):
     return result
 
 @app.get("/teams/{team_id}/members")
-def get_team_members(team_id: int):
+def get_team_members(
+    team_id: int,
+    current_student=Depends(get_current_student),
+):
+    # Same protection as GET /teams/{team_id}: the roster is
+    # student information and requires a valid sign-in.
 
     db = database.SessionLocal()
 

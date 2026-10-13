@@ -37,7 +37,9 @@ function EditTeam() {
   useEffect(() => {
     const fetchTeam = async () => {
       try {
-        const response = await fetch(`${API_URL}/teams/${id}`);
+        const response = await fetch(`${API_URL}/teams/${id}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         const data = await response.json();
 
         if (!response.ok) {
