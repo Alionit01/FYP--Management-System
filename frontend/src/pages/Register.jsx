@@ -344,6 +344,36 @@ function Register() {
               </div>
             )}
 
+            {/* Consent gate. Native `required` on the checkbox blocks
+                submission until it is ticked, so this needs no extra
+                React state and no handler. The link opens in a new tab
+                so a student never loses a half-filled form. */}
+            <label
+              htmlFor="privacy-consent"
+              className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-forest-900/15 bg-cream-100 p-4 text-sm text-ink-soft leading-relaxed transition-colors hover:border-forest-900/30"
+            >
+              <input
+                id="privacy-consent"
+                type="checkbox"
+                name="privacy_consent"
+                required
+                className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-forest-700"
+              />
+
+              <span>
+                I have read and agree to the{" "}
+                <Link
+                  to="/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-forest-800 underline-offset-4 hover:underline"
+                >
+                  Privacy Policy
+                </Link>
+                .
+              </span>
+            </label>
+
             <button
               type="submit"
               disabled={loading}

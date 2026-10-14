@@ -77,9 +77,18 @@ function Footer() {
             © {year} FYP Finder · Built for final-year students
           </p>
 
-          <p className="text-xs text-ink-muted">
-            Students of Iqra University · @iqra.edu.pk
-          </p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <Link
+              to="/privacy"
+              className="text-xs text-ink-muted underline-offset-4 transition-colors hover:text-forest-800 hover:underline"
+            >
+              Privacy Policy
+            </Link>
+
+            <p className="text-xs text-ink-muted">
+              Students of Iqra University · @iqra.edu.pk
+            </p>
+          </div>
         </div>
       </div>
     </footer>

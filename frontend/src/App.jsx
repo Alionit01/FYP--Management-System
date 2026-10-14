@@ -26,6 +26,7 @@ import MyTeam from "./pages/MyTeam";
 import MyProfile from "./pages/MyProfile";
 import EditTeam from "./pages/EditTeam";
 import NotFound from "./pages/NotFound";
+import Privacy from "./pages/Privacy";
 
 function RouteFocus() {
   const location = useLocation();
@@ -74,6 +75,7 @@ function RouteTitle() {
     else if (path === "/teams") title = "Find a Team";
     else if (path === "/login") title = "Sign In";
     else if (path === "/register") title = "Create Account";
+    else if (path === "/privacy") title = "Privacy Policy";
     else if (path === "/verify-email") title = "Email Verification";
     else if (path === "/forgot-password") title = "Reset Password";
     else if (path === "/reset-password") title = "Set New Password";
@@ -111,6 +113,9 @@ function App() {
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        {/* Readable while signed out: the consent checkbox on /register
+            links here, so it can never sit behind ProtectedRoute. */}
+        <Route path="/privacy" element={<Privacy />} />
 
         {/* Protected pages */}
         <Route
