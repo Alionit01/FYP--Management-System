@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { isProfileComplete } from "../profile";
 import API_URL from "../api";
 import Alert from "../components/Alert";
+import PasswordInput from "../components/PasswordInput";
 
 function Login() {
   const navigate = useNavigate();
@@ -175,16 +176,14 @@ function Login() {
                   </Link>
                 </div>
 
-                <input
+                <PasswordInput
                   id="password"
-                  type="password"
                   name="password"
                   value={form.password}
                   onChange={handleChange}
                   required
                   autoComplete="current-password"
                   placeholder="Enter your password"
-                  className="input-field"
                 />
               </div>
             </div>

@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { isProfileComplete } from "../profile";
 import API_URL from "../api";
 import Alert from "../components/Alert";
+import PasswordInput from "../components/PasswordInput";
 
 function Register() {
   const navigate = useNavigate();
@@ -316,9 +317,8 @@ function Register() {
                     Password *
                   </label>
 
-                  <input
+                  <PasswordInput
                     id="password"
-                    type="password"
                     name="password"
                     value={form.password}
                     onChange={handleChange}
@@ -327,7 +327,6 @@ function Register() {
                     maxLength={72}
                     autoComplete="new-password"
                     placeholder="At least 6 characters"
-                    className="input-field"
                   />
 
                   <p className="text-xs text-ink-muted mt-2">

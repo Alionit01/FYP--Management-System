@@ -4,6 +4,7 @@ import { BadgeCheck, ShieldCheck } from "lucide-react";
 import API_URL from "../api";
 import Alert from "../components/Alert";
 import AuthShell from "../components/AuthShell";
+import PasswordInput from "../components/PasswordInput";
 
 function VerifyEmail() {
   const [token] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get("token"));
@@ -85,10 +86,8 @@ function VerifyEmail() {
               Password
             </label>
 
-            <input
+            <PasswordInput
               id="password"
-              className="input-field"
-              type="password"
               required
               minLength="6"
               autoComplete="new-password"
@@ -105,10 +104,8 @@ function VerifyEmail() {
               Confirm password
             </label>
 
-            <input
+            <PasswordInput
               id="confirm-password"
-              className="input-field"
-              type="password"
               required
               minLength="6"
               autoComplete="new-password"

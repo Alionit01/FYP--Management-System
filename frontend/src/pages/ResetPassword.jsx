@@ -4,6 +4,7 @@ import { CheckCircle2, ShieldCheck } from "lucide-react";
 import API_URL from "../api";
 import Alert from "../components/Alert";
 import AuthShell from "../components/AuthShell";
+import PasswordInput from "../components/PasswordInput";
 
 function ResetPassword() {
   const [token] = useState(() =>
@@ -98,10 +99,8 @@ function ResetPassword() {
               New password
             </label>
 
-            <input
+            <PasswordInput
               id="password"
-              className="input-field"
-              type="password"
               required
               minLength="6"
               autoComplete="new-password"
@@ -118,10 +117,8 @@ function ResetPassword() {
               Confirm new password
             </label>
 
-            <input
+            <PasswordInput
               id="confirm-password"
-              className="input-field"
-              type="password"
               required
               minLength="6"
               autoComplete="new-password"
