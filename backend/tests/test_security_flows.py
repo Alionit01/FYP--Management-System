@@ -13,6 +13,11 @@ _test_directory = tempfile.TemporaryDirectory(dir="/tmp/opencode")
 os.environ["DATABASE_URL"] = f"sqlite+pysqlite:///{_test_directory.name}/security.sqlite"
 os.environ["SECRET_KEY"] = "test-only-secret-never-use-in-production"
 os.environ["UNIVERSITY_EMAIL_DOMAIN"] = "iqra.edu.pk"
+# Never inherit the pilot flag from a developer .env: these suites
+# exercise the default (pilot off) flow. Tests that need the pilot on
+# opt in explicitly with patch.dict(). setdefault keeps an explicitly
+# exported value (e.g. PILOT_ONBOARDING_ENABLED=true) authoritative.
+os.environ.setdefault("PILOT_ONBOARDING_ENABLED", "false")
 
 from app import main, models  # noqa: E402
 from app.database import Base, SessionLocal, engine  # noqa: E402

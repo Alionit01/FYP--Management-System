@@ -16,6 +16,11 @@ os.environ["DATABASE_URL"] = (
 )
 os.environ["SECRET_KEY"] = "test-only-secret-never-use-in-production"
 os.environ["UNIVERSITY_EMAIL_DOMAIN"] = "iqra.edu.pk"
+# Never inherit the pilot flag from a developer .env: these suites
+# exercise the default (pilot off) flow. Tests that need the pilot on
+# opt in explicitly with patch.dict(). setdefault keeps an explicitly
+# exported value (e.g. PILOT_ONBOARDING_ENABLED=true) authoritative.
+os.environ.setdefault("PILOT_ONBOARDING_ENABLED", "false")
 
 from app import main, models  # noqa: E402
 from app.auth import verify_password  # noqa: E402
@@ -77,6 +82,20 @@ def request(method: str, path: str, token=None):
     return asyncio.run(call_app(method, path, token=token))
 
 
+def clear_pilot_flag():
+    """Drop the pilot flag so a test observes the default (disabled)
+    state. backend/.env sets PILOT_ONBOARDING_ENABLED=true and
+    load_dotenv() inherits it, which would otherwise leak into tests
+    asserting the disabled behaviour. Returns the previous value so
+    the caller can restore it in tearDown."""
+    return os.environ.pop("PILOT_ONBOARDING_ENABLED", None)
+
+
+def restore_pilot_flag(previous):
+    if previous is not None:
+        os.environ["PILOT_ONBOARDING_ENABLED"] = previous
+
+
 class PilotConfigTests(unittest.TestCase):
     """The pilot flag is off by default and fails closed."""
 
@@ -109,6 +128,9 @@ class PilotRegistrationTests(unittest.TestCase):
     def setUp(self):
         Base.metadata.drop_all(engine)
         Base.metadata.create_all(engine)
+        # Default to the pilot being off; tests that need it on opt in
+        # explicitly through with_pilot().
+        self._pilot_env = clear_pilot_flag()
         self.emails = []
         self.sender = patch.object(
             main, "send_verification_email",
@@ -121,6 +143,7 @@ class PilotRegistrationTests(unittest.TestCase):
     def tearDown(self):
         self.sender.stop()
         Base.metadata.drop_all(engine)
+        restore_pilot_flag(self._pilot_env)
 
     def student(self, local="pilot", password="PilotPass123", **extra):
         return StudentCreate(
@@ -308,6 +331,10 @@ class PilotSwitchOffTests(unittest.TestCase):
     def setUp(self):
         Base.metadata.drop_all(engine)
         Base.metadata.create_all(engine)
+        # Seed accounts under a pilot-on flag, but restore the default
+        # (off) state so the tests below exercise the switch-off path
+        # regardless of what backend/.env contains.
+        self._pilot_env = clear_pilot_flag()
         self.emails = []
         self.sender = patch.object(
             main, "send_verification_email",
@@ -327,6 +354,7 @@ class PilotSwitchOffTests(unittest.TestCase):
     def tearDown(self):
         self.sender.stop()
         Base.metadata.drop_all(engine)
+        restore_pilot_flag(self._pilot_env)
 
     def test_pilot_login_works_then_locks_out_when_disabled(self):
         with patch.dict(os.environ, {"PILOT_ONBOARDING_ENABLED": "true"}):

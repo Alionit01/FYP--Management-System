@@ -18,6 +18,11 @@ os.environ["DATABASE_URL"] = (
 )
 os.environ["SECRET_KEY"] = "test-only-secret-never-use-in-production"
 os.environ["UNIVERSITY_EMAIL_DOMAIN"] = "iqra.edu.pk"
+# Never inherit the pilot flag from a developer .env: these suites
+# exercise the default (pilot off) flow. Tests that need the pilot on
+# opt in explicitly with patch.dict(). setdefault keeps an explicitly
+# exported value (e.g. PILOT_ONBOARDING_ENABLED=true) authoritative.
+os.environ.setdefault("PILOT_ONBOARDING_ENABLED", "false")
 
 from fastapi import Depends, FastAPI  # noqa: E402
 
