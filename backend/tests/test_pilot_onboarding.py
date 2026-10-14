@@ -22,7 +22,7 @@ os.environ["UNIVERSITY_EMAIL_DOMAIN"] = "iqra.edu.pk"
 # exported value (e.g. PILOT_ONBOARDING_ENABLED=true) authoritative.
 os.environ.setdefault("PILOT_ONBOARDING_ENABLED", "false")
 
-from app import main, models  # noqa: E402
+from app import main, migrations, models  # noqa: E402
 from app.auth import verify_password  # noqa: E402
 from app.database import Base, SessionLocal, engine  # noqa: E402
 from app.schemas import StudentCreate, StudentLogin, VerificationRequest  # noqa: E402
@@ -485,12 +485,28 @@ class PilotMigrationTests(unittest.TestCase):
     )
 
     def test_production_migration_statement_is_present(self):
-        source = inspect.getsource(main)
-        migration_zone = source[: source.index("@app.get")]
-        self.assertIn("ADD COLUMN IF NOT EXISTS", migration_zone)
+        # The startup migration block moved out of main.py into
+        # app/migrations.py (audit DB-02: failures were swallowed).
+        source = inspect.getsource(migrations)
+        self.assertIn("ADD COLUMN", source)
         self.assertIn(
-            "pilot_account BOOLEAN NOT NULL DEFAULT FALSE", migration_zone
+            "pilot_account BOOLEAN NOT NULL DEFAULT FALSE", source
         )
+
+    def test_startup_never_verifies_accounts(self):
+        # SEC-04 regression guard. The removed block ran
+        # ``UPDATE students SET email_verified = TRUE WHERE
+        # verification_token IS NULL`` on every start-up in every
+        # worker; nothing writes that token any longer, so it matched
+        # every row and silently verified unverified pilot accounts.
+        source = inspect.getsource(migrations)
+        for line in source.splitlines():
+            if "email_verified" in line and "UPDATE" in line:
+                self.fail(
+                    "startup migrations must not rewrite "
+                    f"email_verified: {line.strip()}"
+                )
+        self.assertNotIn("SET email_verified = TRUE", source)
 
     def test_existing_rows_default_to_not_pilot(self):
         conn = sqlite3.connect(":memory:")

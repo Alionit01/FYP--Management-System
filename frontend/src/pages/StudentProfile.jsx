@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, BriefcaseBusiness, Code2, Mail, MessageCircle } from "lucide-react";
 import API_URL from "../api";
+import { extractErrorMessage } from "../api/errors";
 import Alert from "../components/Alert";
 import Avatar from "../components/Avatar";
 import Tags from "../components/Tags";
@@ -112,7 +113,9 @@ function StudentProfile() {
 
       if (!response.ok) {
         setError(
-          data.detail || "Could not load contact information."
+          extractErrorMessage(
+            response, data, "Could not load contact information."
+          )
         );
         return;
       }

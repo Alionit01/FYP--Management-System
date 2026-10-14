@@ -5,7 +5,7 @@ import time
 from collections import deque
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func, text
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,7 +26,8 @@ from .schemas import (
     TeamUpdate,
     PasswordResetRequest,
     PasswordReset,
-    MAX_TEAM_MEMBERS
+    MAX_TEAM_MEMBERS,
+    DIRECTORY_PICTURE_INLINE_LIMIT,
 )
 from .auth import hash_password, verify_password, create_access_token
 from .email import send_verification_email, send_password_reset_email
@@ -107,45 +108,73 @@ def pilot_onboarding_enabled() -> bool:
     )
 
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
+def _trusted_proxy_count() -> int:
+    """How many reverse proxies sit in front of this application.
 
-# Lightweight column migrations for existing databases.
-# New users are created with email_verified=False explicitly; existing
-# rows are grandfathered in as verified so they are not locked out.
+    0 (the default) means "no proxy is configured": forwarded headers
+    are ignored and the direct TCP peer is the login rate-limit
+    identity. Set this in deployment to the number of hops you actually
+    operate. Unparseable or negative values fail safe to 0.
+    """
+    try:
+        return max(0, int(os.getenv("TRUSTED_PROXY_COUNT", "0")))
+    except ValueError:
+        return 0
+
+
+# Create database tables, then apply versioned migrations.
+#
+# This replaces an inline ALTER TABLE block that ran inside
+# ``try/except Exception: pass``. That block performed an unguarded
+# ``UPDATE students SET email_verified = TRUE WHERE verification_token
+# = NULL`` on *every* start-up in every worker. Because nothing writes
+# ``verification_token`` any longer, it matched every row and silently
+# converted unverified pilot accounts into verified ones (audit finding
+# SEC-04). Migration failure is now loud instead of swallowed (DB-02).
+#
+# Imported above create_all so that SchemaMigration is registered in
+# Base.metadata and its bookkeeping table is created with the rest.
+from .migrations import run_migrations  # noqa: E402
+from .observability import configure as configure_logging  # noqa: E402
+from .observability import log_event, log_warning  # noqa: E402
+
+configure_logging()
+
+Base.metadata.create_all(bind=engine)
 try:
-    with engine.begin() as conn:
-        conn.execute(text(
-            "ALTER TABLE students ADD COLUMN IF NOT EXISTS "
-            "email_verified BOOLEAN NOT NULL DEFAULT FALSE"
-        ))
-        conn.execute(text(
-            "ALTER TABLE students ADD COLUMN IF NOT EXISTS "
-            "verification_token VARCHAR"
-        ))
-        conn.execute(text(
-            "UPDATE students SET email_verified = TRUE "
-            "WHERE verification_token IS NULL"
-        ))
-        conn.execute(text(
-            "ALTER TABLE students ADD COLUMN IF NOT EXISTS "
-            "profile_completed BOOLEAN NOT NULL DEFAULT TRUE"
-        ))
-        # Authorization role. Existing students are grandfathered as
-        # 'student' by the DEFAULT; nothing is ever auto-promoted to
-        # 'admin' here — the only promotion path is scripts/make_admin.py.
-        conn.execute(text(
-            "ALTER TABLE students ADD COLUMN IF NOT EXISTS "
-            "role VARCHAR NOT NULL DEFAULT 'student'"
-        ))
-        # Temporary pilot marker. Existing rows stay FALSE: the
-        # migration never flags or verifies any account.
-        conn.execute(text(
-            "ALTER TABLE students ADD COLUMN IF NOT EXISTS "
-            "pilot_account BOOLEAN NOT NULL DEFAULT FALSE"
-        ))
+    applied = run_migrations(engine)
 except Exception:
-    pass
+    # DB-02: a migration that cannot complete must be loud. Record it
+    # with its traceback before the process exits.
+    from .observability import log_exception
+
+    log_exception("migration_failed", phase="startup")
+    raise
+
+if applied:
+    # Migrations are rare and consequential; record which ones ran.
+    log_event("migrations_applied", versions=",".join(applied))
+
+
+log_event(
+    "rate_limit_config",
+    trusted_proxy_count=_trusted_proxy_count(),
+    forwarded_headers="trusted; read right-to-left"
+    if _trusted_proxy_count() > 0
+    else "IGNORED; the direct peer is used",
+)
+if _trusted_proxy_count() == 0:
+    log_warning(
+        "proxy_trust_unconfigured",
+        detail=(
+            "TRUSTED_PROXY_COUNT is 0, so X-Forwarded-For is ignored. If "
+            "this app runs behind a proxy, the ASGI server must not "
+            "rewrite the client address either: run uvicorn with "
+            "--no-proxy-headers (or an empty FORWARDED_ALLOW_IPS), "
+            "otherwise request.client.host is already a client-controlled "
+            "claim and the limiter is bypassable."
+        ),
+    )
 
 
 @app.get("/")
@@ -175,6 +204,53 @@ async def security_headers(request, call_next):
         "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
     )
     return response
+
+
+# ---------------------------------------------------------------------------
+# Error visibility (audit REL-04)
+# ---------------------------------------------------------------------------
+#
+# Before this, an unexpected failure produced a 500 for the client and
+# left nothing behind: no traceback, no path, no way to find out what
+# happened. The handlers below record the event and preserve the
+# response the framework would have sent anyway.
+
+from fastapi.exception_handlers import http_exception_handler  # noqa: E402
+from fastapi.responses import JSONResponse  # noqa: E402
+
+
+@app.exception_handler(HTTPException)
+async def _logged_http_exception(request: Request, exc: HTTPException):
+    """Record authorization denials and server-side failures.
+
+    401 and 422 are deliberately not logged: they are routine (a wrong
+    password, a rejected form) and are already recorded where they
+    matter, so logging them here would add noise and duplicate personal
+    data for no benefit.
+    """
+    if exc.status_code == 403 or exc.status_code >= 500:
+        log_warning(
+            "http_error",
+            status=exc.status_code,
+            method=request.method,
+            path=request.url.path,
+        )
+    return await http_exception_handler(request, exc)
+
+
+@app.exception_handler(Exception)
+async def _logged_unexpected_exception(request: Request, exc: Exception):
+    """Last resort: an exception nothing else handled."""
+    log_exception(
+        "unhandled_exception",
+        method=request.method,
+        path=request.url.path,
+        error_type=type(exc).__name__,
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
 
 
 # =========================
@@ -364,53 +440,122 @@ def verify_email(request: VerificationRequest):
         db.close()
 
 
-_LOGIN_ATTEMPTS: dict = {}
+_LOGIN_ATTEMPTS: dict = {}          # keyed by "<client-ip>|<email>"
+_LOGIN_EMAIL_ATTEMPTS: dict = {}    # keyed by "<email>"
 LOGIN_MAX_ATTEMPTS = 5
 LOGIN_WINDOW_SECONDS = 60
-_MAX_TRACKED_IPS = 10000
+# Per-account ceiling. Higher than the per-client limit on purpose: it
+# must survive a distributed source (many client IPs, one target
+# mailbox) without letting one attacker lock a student out of their own
+# account from a single IP.
+LOGIN_EMAIL_MAX_ATTEMPTS = 20
+LOGIN_EMAIL_WINDOW_SECONDS = 900
+_MAX_TRACKED_KEYS = 10000
 
 
-def _client_ip(request: Request) -> str:
-    # Trust X-Forwarded-For only because the app is deployed behind a
-    # proxy; use the first (client) hop.
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
+def _direct_peer(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-def _record_login_failure(request: Request) -> None:
-    ip = _client_ip(request)
-    now = time.monotonic()
-    attempts = _LOGIN_ATTEMPTS.setdefault(ip, deque())
-    while attempts and now - attempts[0] > LOGIN_WINDOW_SECONDS:
+def _client_ip(request: Request) -> str:
+    """Best-effort client address, spoof-resistant by default.
+
+    ``X-Forwarded-For`` is a *claim* written by whoever sent it: proxies
+    append the address they observed, so the left-most entries are
+    whatever the caller chose to send. The old implementation took the
+    first hop, which let an attacker rotate the header on every request
+    and reset the login limiter each time (audit SEC-01).
+
+    We therefore only honour the header when a proxy is explicitly
+    configured, and we read it from the right. With N trusted proxies
+    the right-most N entries were appended by infrastructure we control,
+    so the entry at position ``len(hops) - N`` is the real client and
+    everything left of it is discarded. With N=0 the header is ignored
+    entirely.
+    """
+    trusted = _trusted_proxy_count()
+    if trusted <= 0:
+        return _direct_peer(request)
+
+    forwarded = request.headers.get("x-forwarded-for")
+    if not forwarded:
+        return _direct_peer(request)
+
+    hops = [hop.strip() for hop in forwarded.split(",") if hop.strip()]
+    if len(hops) < trusted:
+        # Fewer hops than we trust: the chain is malformed or
+        # client-supplied. Do not guess — fall back to the peer.
+        return _direct_peer(request)
+    return hops[len(hops) - trusted]
+
+
+def _prune(attempts, window: float, now: float) -> None:
+    while attempts and now - attempts[0] > window:
         attempts.popleft()
-    attempts.append(now)
-    # Bound memory usage
-    if len(_LOGIN_ATTEMPTS) > _MAX_TRACKED_IPS:
-        for key in [k for k, v in _LOGIN_ATTEMPTS.items() if not v]:
-            del _LOGIN_ATTEMPTS[key]
 
 
-def _check_login_rate_limit(request: Request) -> None:
-    ip = _client_ip(request)
-    now = time.monotonic()
-    attempts = _LOGIN_ATTEMPTS.get(ip)
-    if not attempts:
+def _evict(store: dict, window: float) -> None:
+    """Bound memory by dropping keys whose newest attempt has expired."""
+    if len(store) <= _MAX_TRACKED_KEYS:
         return
-    while attempts and now - attempts[0] > LOGIN_WINDOW_SECONDS:
-        attempts.popleft()
-    if len(attempts) >= LOGIN_MAX_ATTEMPTS:
-        raise HTTPException(
-            status_code=429,
-            detail="Too many login attempts. Please try again later."
-        )
+    now = time.monotonic()
+    for key in [k for k, v in store.items()
+                if not v or now - v[-1] > window]:
+        del store[key]
+
+
+def _login_rate_keys(request: Request, email: str) -> list:
+    """Both limits a failed login counts against.
+
+    The composite (client, mailbox) key is the primary defence and stops
+    a single source hammering one account. The mailbox-only key stops
+    the same attack spread across many source addresses.
+    """
+    email = (email or "").strip().lower()
+    return [
+        (_LOGIN_ATTEMPTS, f"{_client_ip(request)}|{email}",
+         LOGIN_WINDOW_SECONDS, LOGIN_MAX_ATTEMPTS),
+        (_LOGIN_EMAIL_ATTEMPTS, email,
+         LOGIN_EMAIL_WINDOW_SECONDS, LOGIN_EMAIL_MAX_ATTEMPTS),
+    ]
+
+
+def _record_login_failure(request: Request, email: str) -> None:
+    now = time.monotonic()
+    for store, key, window, _limit in _login_rate_keys(request, email):
+        attempts = store.setdefault(key, deque())
+        _prune(attempts, window, now)
+        attempts.append(now)
+    _evict(_LOGIN_ATTEMPTS, LOGIN_WINDOW_SECONDS)
+    _evict(_LOGIN_EMAIL_ATTEMPTS, LOGIN_EMAIL_WINDOW_SECONDS)
+
+
+def _check_login_rate_limit(request: Request, email: str) -> None:
+    now = time.monotonic()
+    for store, key, window, limit in _login_rate_keys(request, email):
+        attempts = store.get(key)
+        if not attempts:
+            continue
+        _prune(attempts, window, now)
+        if len(attempts) >= limit:
+            log_event(
+                "login_rate_limited",
+                client_ip=_client_ip(request),
+                scope=("account" if store is _LOGIN_EMAIL_ATTEMPTS
+                       else "client"),
+                limit=limit,
+                window_seconds=int(window),
+            )
+            raise HTTPException(
+                status_code=429,
+                detail="Too many login attempts. Please try again later."
+            )
 
 
 @app.post("/login")
 def login(student: StudentLogin, request: Request):
 
-    _check_login_rate_limit(request)
+    _check_login_rate_limit(request, student.email)
 
     db = database.SessionLocal()
 
@@ -422,7 +567,19 @@ def login(student: StudentLogin, request: Request):
         if not user or not verify_password(
             student.password, user.password
         ):
-            _record_login_failure(request)
+            # Count against the submitted mailbox even when no such
+            # account exists, so enumeration via response timing or
+            # status codes cannot be combined with a free second pass.
+            _record_login_failure(request, student.email)
+            # No email and no password here: only the id when the
+            # account exists, so a log line never becomes a second copy
+            # of personal data or a credential oracle.
+            log_event(
+                "login_failed",
+                reason="bad_credentials",
+                user_id=user.id if user else None,
+                client_ip=_client_ip(request),
+            )
             raise HTTPException(
                 status_code=401,
                 detail="Invalid email or password"
@@ -437,6 +594,11 @@ def login(student: StudentLogin, request: Request):
             if user.pilot_account and pilot_onboarding_enabled():
                 pass
             elif user.pilot_account:
+                log_event(
+                    "login_denied",
+                    reason="pilot_ended",
+                    user_id=user.id,
+                )
                 raise HTTPException(
                     status_code=403,
                     detail=(
@@ -445,12 +607,20 @@ def login(student: StudentLogin, request: Request):
                     )
                 )
             else:
+                log_event(
+                    "login_denied",
+                    reason="unverified",
+                    user_id=user.id,
+                )
                 raise HTTPException(
                     status_code=403,
                     detail="Please verify your email before logging in"
                 )
 
         token = create_access_token(user.id)
+
+        log_event("login_succeeded", user_id=user.id,
+                  client_ip=_client_ip(request))
 
         return {
             "access_token": token,
@@ -586,8 +756,17 @@ DIRECTORY_FIELDS = (
 )
 
 
-def _directory_entry(student: models.Student) -> dict:
-    return {field: getattr(student, field) for field in DIRECTORY_FIELDS}
+def _directory_entry(student: models.Student, include_picture: bool = True) -> dict:
+    entry = {field: getattr(student, field) for field in DIRECTORY_FIELDS}
+    if not include_picture:
+        # SEC-08: a directory page would otherwise ship every avatar
+        # inline (observed: 50 students x ~400 KB each). The picture is
+        # still served by /students/{id}; the frontend's <Avatar>
+        # component shows an initial badge when it is absent.
+        picture = entry.get("profile_picture")
+        if picture and len(picture) > DIRECTORY_PICTURE_INLINE_LIMIT:
+            entry["profile_picture"] = None
+    return entry
 
 
 @app.get("/students")
@@ -604,7 +783,10 @@ def get_students(
 
     try:
         students = db.query(models.Student).offset(skip).limit(limit).all()
-        return [_directory_entry(student) for student in students]
+        return [
+            _directory_entry(student, include_picture=False)
+            for student in students
+        ]
     finally:
         db.close()
 
@@ -823,6 +1005,17 @@ def create_team(
                 detail="Complete your profile before creating a team"
             )
 
+        # Serialize every membership decision for this student. Two
+        # concurrent requests (e.g. creating a team while accepting an
+        # invitation to a different team) previously raced: each locked a
+        # *different* team row, so both passed the check below and both
+        # inserted. The student row is the one both paths share. The
+        # unique_student_team constraint (migration 0002) remains the
+        # final authority if this lock is ever bypassed.
+        db.query(models.Student).filter(
+            models.Student.id == current_student.id
+        ).with_for_update().first()
+
         # Student can only belong to one team
         existing_membership = db.query(models.TeamMember).filter(
             models.TeamMember.student_id == current_student.id
@@ -885,6 +1078,9 @@ def create_team(
         db.commit()
         db.refresh(new_team)
 
+        log_event("team_created", team_id=new_team.id,
+                  owner_id=current_student.id)
+
         return {
             "message": "Team created successfully",
             "team_id": new_team.id
@@ -893,6 +1089,23 @@ def create_team(
     except HTTPException:
         db.rollback()
         raise
+
+    except IntegrityError as exc:
+        # The unique_student_team constraint is the authority for
+        # "one team per student". If two requests raced past the
+        # pre-check, the loser gets a constraint violation here rather
+        # than an inconsistent membership. Report it as the business
+        # rule it is, not as a server fault.
+        db.rollback()
+        if "unique_student_team" in str(exc.orig):
+            raise HTTPException(
+                status_code=400,
+                detail="You are already in a team"
+            )
+        raise HTTPException(
+            status_code=500,
+            detail="Could not create team"
+        )
 
     except Exception:
         db.rollback()
@@ -1447,6 +1660,17 @@ def accept_invitation(
 ):
     db = database.SessionLocal()
     try:
+        # Lock the student row FIRST: it is the one resource shared by
+        # every concurrent "join a team" attempt from this student.
+        # Locking only the team (as before) left a cross-team race open,
+        # because two accepts for two different teams locked two
+        # different rows and both passed the membership check below.
+        # The unique_student_team constraint (migration 0002) is the
+        # final authority if this lock is bypassed.
+        db.query(models.Student).filter(
+            models.Student.id == current_student.id
+        ).with_for_update().first()
+
         # Lock the team before the invitation so member-count and spot updates
         # are serialized with other team mutations.
         invitation_team = db.query(models.TeamInvitation.team_id).filter(
@@ -1483,9 +1707,25 @@ def accept_invitation(
         _clamp_spots_available(db, team)
         try:
             db.commit()
-        except IntegrityError:
+        except IntegrityError as exc:
             db.rollback()
+            # unique_student_team fired: this student reached another
+            # team between our check and our insert. Surface the real
+            # business rule instead of a generic failure.
+            if "unique_student_team" in str(exc.orig):
+                log_event(
+                    "team_join_rejected",
+                    reason="already_in_a_team",
+                    student_id=current_student.id,
+                    team_id=invitation.team_id,
+                )
+                raise HTTPException(
+                    status_code=409, detail="You are already in a team"
+                )
             raise HTTPException(status_code=409, detail="Could not join the team")
+
+        log_event("team_joined", student_id=current_student.id,
+                  team_id=invitation.team_id, invitation_id=invitation_id)
         return {"message": "You joined the team"}
     finally:
         db.close()

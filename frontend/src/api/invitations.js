@@ -1,4 +1,5 @@
 import API_URL from "../api";
+import { reportUnauthorized } from "./errors";
 
 /* Pending team invitations for the signed-in student.
 
@@ -22,7 +23,12 @@ export function announceInvitationsChanged() {
 
 /* The signed-in student's pending invitations, or [] when signed out,
    the request fails, or the response is malformed. Never throws — a
-   missing count is a cosmetic problem, not a reason to break a page. */
+   missing count is a cosmetic problem, not a reason to break a page.
+
+   A 401 is the exception that matters: it is reported to AuthContext
+   (FE-03) before the empty list is returned, so a rejected token clears
+   the signed-in state instead of leaving the bell quietly showing zero
+   invitations while the navbar still looks authenticated. */
 export async function fetchMyInvitations() {
   const token = localStorage.getItem("access_token");
   if (!token) return [];
@@ -32,7 +38,10 @@ export async function fetchMyInvitations() {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    if (!response.ok) return [];
+    if (!response.ok) {
+      reportUnauthorized(response);
+      return [];
+    }
 
     const data = await response.json();
     return Array.isArray(data) ? data : [];

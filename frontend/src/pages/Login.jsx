@@ -4,6 +4,7 @@ import { CheckCircle2, KeyRound } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { isProfileComplete } from "../profile";
 import API_URL from "../api";
+import { extractErrorMessage } from "../api/errors";
 import Alert from "../components/Alert";
 import PasswordInput from "../components/PasswordInput";
 
@@ -50,7 +51,11 @@ function Login() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.detail || "Invalid email or password.");
+        // Normalised: detail may be a string, a Pydantic error array,
+        // or absent (e.g. the 429 from the login rate limiter).
+        setError(
+          extractErrorMessage(response, data, "Invalid email or password.")
+        );
         return;
       }
 

@@ -26,7 +26,7 @@ os.environ.setdefault("PILOT_ONBOARDING_ENABLED", "false")
 
 from fastapi import Depends, FastAPI  # noqa: E402
 
-from app import dependencies, main, models  # noqa: E402
+from app import dependencies, main, migrations, models  # noqa: E402
 from app.auth import create_access_token, hash_password  # noqa: E402
 from app.database import Base, SessionLocal, engine  # noqa: E402
 from app.schemas import StudentCreate, VerificationRequest  # noqa: E402
@@ -187,7 +187,7 @@ class RoleEscalationTests(unittest.TestCase):
 
 
 class MigrationTests(unittest.TestCase):
-    """The startup migration grandfatheres existing rows as students."""
+    """The startup migration adds the role column safely."""
 
     def setUp(self):
         Base.metadata.drop_all(engine)
@@ -196,28 +196,29 @@ class MigrationTests(unittest.TestCase):
     def tearDown(self):
         Base.metadata.drop_all(engine)
 
-    # Production statement (Postgres), from app/main.py:
-    #   ALTER TABLE students ADD COLUMN IF NOT EXISTS
-    #   role VARCHAR NOT NULL DEFAULT 'student'
-    # SQLite lacks ADD COLUMN IF NOT EXISTS, so the backfill semantics
-    # (DEFAULT 'student' applying to pre-existing rows) are verified
-    # with the same statement minus that guard clause.
+    # Production statement (Postgres), now from app/migrations.py:
+    #   ALTER TABLE students ADD COLUMN role VARCHAR NOT NULL DEFAULT 'student'
+    # SQLite lacks ADD COLUMN IF NOT EXISTS, so migrations.py asks the
+    # schema instead; the backfill semantics (DEFAULT 'student' applying
+    # to pre-existing rows) are verified with the same statement minus
+    # that guard clause.
     _SQLITE_EQUIVALENT = (
         "ALTER TABLE students ADD COLUMN role VARCHAR NOT NULL DEFAULT 'student'"
     )
 
     def test_production_migration_statement_is_present_and_guarded(self):
-        source = inspect.getsource(main)
-        migration_zone = source[: source.index("@app.get")]
-        self.assertIn("ADD COLUMN IF NOT EXISTS", migration_zone)
+        # The migration block moved out of main.py into app/migrations.py
+        # (audit DB-02) — the guarantees below are asserted there now.
+        source = inspect.getsource(migrations)
+        self.assertIn("ADD COLUMN", source)
         self.assertIn(
-            "role VARCHAR NOT NULL DEFAULT 'student'", migration_zone
+            "role VARCHAR NOT NULL DEFAULT 'student'", source
         )
-        # No SQL statement in the startup block may write 'admin':
+        # No SQL statement in any migration may write 'admin':
         # existing students are grandfathered, never promoted. (Lines
         # with 'admin' are allowed only in comments.)
         sql_lines = [
-            line for line in migration_zone.splitlines()
+            line for line in source.splitlines()
             if "text(" in line or "ALTER TABLE" in line or "UPDATE " in line
         ]
         self.assertFalse(

@@ -1,17 +1,23 @@
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Pencil, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import API_URL from "../api";
+import { classifyFailure } from "../api/errors";
 import Avatar from "../components/Avatar";
 import Tags from "../components/Tags";
 
 function TeamProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [team, setTeam] = useState(null);
   const [contact, setContact] = useState(null);
   const [loading, setLoading] = useState(true);
+  /* Why the load failed. Team details require an account, so a
+     signed-out visitor is the common case — and telling them "team not
+     found" when the team exists is simply wrong (audit FE-04). */
+  const [failure, setFailure] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -19,18 +25,22 @@ function TeamProfile() {
     fetch(`${API_URL}/teams/${id}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
-      .then((response) => {
+      .then(async (response) => {
         if (!response.ok) {
-          throw new Error("Unable to load team");
+          setFailure(classifyFailure(response.status));
+          return null;
         }
-
         return response.json();
       })
       .then((data) => {
-        setTeam(data);
+        if (data) {
+          setTeam(data);
+          setFailure(null);
+        }
         setLoading(false);
       })
       .catch(() => {
+        setFailure("server");
         setLoading(false);
       });
   }, [id]);
@@ -84,6 +94,68 @@ function TeamProfile() {
   }
 
   if (!team) {
+    /* The backend keeps team details behind authentication; the public
+       /teams list is what a signed-out visitor can browse. Offer the
+       sign-in path rather than a dead end, and keep the cases apart so
+       a real missing team still says so. */
+    if (failure === "unauthorized") {
+      return (
+        <main className="page-container max-w-4xl">
+          <div className="empty-state">
+            <h1 className="display text-2xl text-forest-900">
+              Sign in to view this team
+            </h1>
+
+            <p className="mt-2 text-ink-soft">
+              Team details are only visible to signed-in students. This
+              team does exist — sign in to see its project, members and
+              contact details.
+            </p>
+
+            <Link
+              to="/login"
+              state={{ from: location }}
+              className="primary-button mt-5"
+            >
+              Sign in
+            </Link>
+
+            <Link to="/teams" className="secondary-button mt-3 ml-3">
+              Back to Teams
+            </Link>
+          </div>
+        </main>
+      );
+    }
+
+    if (failure === "server") {
+      return (
+        <main className="page-container max-w-4xl">
+          <div className="empty-state">
+            <h1 className="display text-2xl text-forest-900">
+              Could not load this team
+            </h1>
+
+            <p className="mt-2 text-ink-soft">
+              Something went wrong on our side. Please try again.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="primary-button mt-5"
+            >
+              Try again
+            </button>
+
+            <Link to="/teams" className="secondary-button mt-3 ml-3">
+              Back to Teams
+            </Link>
+          </div>
+        </main>
+      );
+    }
+
     return (
       <main className="page-container max-w-4xl">
         <div className="empty-state">

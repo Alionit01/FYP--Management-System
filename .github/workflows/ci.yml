@@ -1,0 +1,78 @@
+name: CI
+
+# Runs the checks that were missing when the audit was performed
+# (finding REL-02: no CI, so a broken build or a failing test was only
+# discovered by hand).
+#
+# It is deliberately credential-free: the backend suites point
+# DATABASE_URL at a throwaway SQLite file and set their own SECRET_KEY,
+# so nothing here needs — or could use — production configuration.
+# No step here talks to a database, a mail transport, or the deployed
+# API.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Byte-compile the application
+        run: python -m compileall -q app
+
+      # The test suites create their throwaway SQLite databases inside
+      # /tmp/opencode (a convention shared with local development).
+      # Create it so the suites are portable to a clean runner.
+      - name: Prepare the test scratch directory
+        run: mkdir -p /tmp/opencode
+
+      - name: Run the test suite
+        run: python -m unittest discover -s tests -v
+
+  frontend:
+    name: Frontend (lint, test, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build

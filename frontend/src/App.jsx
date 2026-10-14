@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import {
   BrowserRouter,
+  Link,
   Routes,
   Route,
   useLocation,
@@ -10,6 +11,7 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { useAuth } from "./context/AuthContext";
 
 import Home from "./pages/Home";
 import Students from "./pages/Students";
@@ -93,12 +95,56 @@ function RouteTitle() {
   return null;
 }
 
+/* Shown once when a session is dropped while the app is open (FE-03).
+   Explains the sign-out instead of leaving the student staring at a
+   login page they did not ask for, and offers a direct way back in. */
+function SessionExpiredNotice() {
+  const { sessionExpired, dismissSessionExpired } = useAuth();
+  const location = useLocation();
+
+  useEffect(() => {
+    // A fresh navigation (including to /login) is its own answer.
+    dismissSessionExpired();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  if (!sessionExpired) return null;
+
+  return (
+    <div
+      role="status"
+      className="border-b border-warning-300/60 bg-warning-50 text-warning-900"
+    >
+      <div className="mx-auto max-w-6xl px-4 py-3 flex flex-wrap items-center gap-3 text-sm">
+        <p className="flex-1 min-w-[14rem]">
+          Your session has expired, so we signed you out to protect your
+          account. Sign in again to carry on where you left off.
+        </p>
+        <Link
+          to="/login"
+          className="rounded-lg bg-forest-700 px-4 py-2 font-medium text-white hover:bg-forest-800"
+        >
+          Sign in again
+        </Link>
+        <button
+          type="button"
+          onClick={dismissSessionExpired}
+          className="rounded-lg px-3 py-2 text-ink-soft hover:text-forest-800"
+        >
+          Dismiss
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
       <RouteTitle />
       <RouteFocus />
       <Navbar />
+      <SessionExpiredNotice />
 
       <ErrorBoundary>
       <Routes>

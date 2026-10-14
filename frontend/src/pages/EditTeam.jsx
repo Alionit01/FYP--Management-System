@@ -2,6 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Save, X } from "lucide-react";
 import API_URL from "../api";
+import {
+  extractErrorMessage,
+  MAX_AVAILABLE_SPOTS,
+  MAX_TEAM_MEMBERS,
+} from "../api/errors";
 import Alert from "../components/Alert";
 
 const programs = [
@@ -43,7 +48,9 @@ function EditTeam() {
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.detail || "Could not load team.");
+          throw new Error(
+            extractErrorMessage(response, data, "Could not load team.")
+          );
         }
 
         if (
@@ -127,7 +134,9 @@ function EditTeam() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.detail || "Could not update team.");
+        throw new Error(
+          extractErrorMessage(response, data, "Could not update team.")
+        );
       }
 
       navigate(`/teams/${id}`);
@@ -272,11 +281,16 @@ function EditTeam() {
             type="number"
             name="spots_available"
             min="0"
-            max="20"
+            max={MAX_AVAILABLE_SPOTS}
             value={form.spots_available}
             onChange={handleChange}
             className="input-field"
           />
+
+          <p className="text-xs text-ink-muted mt-2">
+            0–{MAX_AVAILABLE_SPOTS}. A team can never exceed{" "}
+            {MAX_TEAM_MEMBERS} members in total.
+          </p>
         </div>
 
         <div>

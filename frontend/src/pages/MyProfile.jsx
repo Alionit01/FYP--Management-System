@@ -13,12 +13,24 @@ import {
   X,
 } from "lucide-react";
 import API_URL from "../api";
+import { extractErrorMessage } from "../api/errors";
 import { useAuth } from "../context/AuthContext";
 import { isProfileComplete } from "../profile";
 import Alert from "../components/Alert";
 import Avatar from "../components/Avatar";
 import InvitationsSection from "../components/InvitationsSection";
 import Tags from "../components/Tags";
+
+/* Avatar limits. Mirrors backend/app/schemas.py: the same raster
+   allow-list (no SVG — it is markup, not an image) and the same 1 MB
+   cap. Enforced here for instant feedback and again on the server. */
+const ACCEPTED_PICTURE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+];
+const MAX_PICTURE_BYTES = 1024 * 1024;
 
 /* Checklist shown while a profile is still incomplete. Status is
    conveyed by icon shape + text, not colour alone. */
@@ -66,7 +78,7 @@ function SetupBanner({ profile }) {
       </ul>
 
       <p className="mt-4 text-xs text-warning-700/80">
-        A profile photo, bio and interests are optional.
+        Profile photo are optional but make sure to add linkdin/github links to your profile. It will help other students to find you and see the compatibility.
       </p>
     </section>
   );
@@ -97,7 +109,9 @@ function MyProfile() {
 
         if (!response.ok) {
           throw new Error(
-            data.detail || "Could not load your profile."
+            extractErrorMessage(
+              response, data, "Could not load your profile."
+            )
           );
         }
 
@@ -142,12 +156,16 @@ function MyProfile() {
 
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      setError("Please choose an image file.");
+    // Keep these in step with the server-side rules in
+    // backend/app/schemas.py (_validate_picture): the same raster
+    // allow-list and the same 1 MB limit. Checking here turns a
+    // server-side 422 into an immediate, readable message.
+    if (!ACCEPTED_PICTURE_TYPES.includes(file.type)) {
+      setError("Please choose a JPEG, PNG, GIF or WebP image.");
       return;
     }
 
-    if (file.size > 1024 * 1024) {
+    if (file.size > MAX_PICTURE_BYTES) {
       setError("Image is too large. Please use a file under 1 MB.");
       return;
     }

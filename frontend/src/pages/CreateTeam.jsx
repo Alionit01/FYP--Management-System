@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Rocket } from "lucide-react";
 import API_URL from "../api";
+import { extractErrorMessage, MAX_AVAILABLE_SPOTS } from "../api/errors";
 import Alert from "../components/Alert";
 
 function CreateTeam() {
@@ -52,7 +53,7 @@ function CreateTeam() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.detail || "Could not create team.");
+        setError(extractErrorMessage(response, data, "Could not create team."));
         return;
       }
 
@@ -189,12 +190,13 @@ function CreateTeam() {
                 value={form.spots_available}
                 onChange={handleChange}
                 min="0"
+                max={MAX_AVAILABLE_SPOTS}
                 required
                 className="input-field"
               />
 
               <p className="text-xs text-ink-muted mt-2">
-                Number of additional members you need.
+                Number of additional members you need (0–{MAX_AVAILABLE_SPOTS}).
               </p>
             </div>
           </div>

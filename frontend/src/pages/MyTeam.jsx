@@ -8,6 +8,7 @@ import {
   Users,
 } from "lucide-react";
 import API_URL from "../api";
+import { extractErrorMessage } from "../api/errors";
 import Alert from "../components/Alert";
 import Avatar from "../components/Avatar";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -77,7 +78,10 @@ function MyTeam() {
     }
   };
 
+  // The initial data load for this page: setting the loading flag
+  // synchronously before the first await is what drives the skeleton UI.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchTeam();
   }, []);
 
@@ -99,7 +103,9 @@ function MyTeam() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.detail || "Unable to leave team.");
+        throw new Error(
+          extractErrorMessage(response, data, "Unable to leave team.")
+        );
       }
 
       navigate("/teams");
@@ -123,7 +129,9 @@ function MyTeam() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.detail || "Unable to delete team.");
+        throw new Error(
+          extractErrorMessage(response, data, "Unable to delete team.")
+        );
       }
 
       navigate("/teams");
@@ -203,7 +211,9 @@ function MyTeam() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.detail || "Unable to fetch students.");
+        throw new Error(
+          extractErrorMessage(response, data, "Unable to fetch students.")
+        );
       }
 
       setStudents(data.students || data);
@@ -264,7 +274,9 @@ function MyTeam() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.detail || "Unable to remove member.");
+        throw new Error(
+          extractErrorMessage(response, data, "Unable to remove member.")
+        );
       }
 
       setMessage("Member removed successfully.");
@@ -274,8 +286,11 @@ function MyTeam() {
     }
   };
 
+  // Owner-only: load the student directory so the invite list can render.
+  // Same fetch-on-mount shape as fetchTeam above.
   useEffect(() => {
     if (isOwner) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchStudents();
     }
   }, [isOwner]);
