@@ -17,6 +17,7 @@ from . import schemas
 
 from .database import engine, Base
 from . import models, database
+from .models import INVITATION_TTL, utc_now
 from .schemas import (
     StudentCreate,
     TeamCreate,
@@ -816,8 +817,10 @@ def _may_view_contact(db: Session, requester_id: int, target_id: int) -> bool:
     """Contact details (email, whatsapp) require an explicit relationship.
 
     Allowed: the student themselves, a teammate (shared team), or a
-    pending team invitation in either direction. Being signed in is not
-    enough on its own.
+    *live* team invitation in either direction. Being signed in is not
+    enough on its own, and neither is an invitation that has expired —
+    it is no longer a decision anyone can act on, so it must not keep
+    leaking contact details forever.
     """
     if requester_id == target_id:
         return True
@@ -834,19 +837,18 @@ def _may_view_contact(db: Session, requester_id: int, target_id: int) -> bool:
     ).first():
         return True
 
-    return (
-        db.query(models.TeamInvitation).filter(
-            (
-                (models.TeamInvitation.invited_by == requester_id)
-                & (models.TeamInvitation.student_id == target_id)
-            )
-            | (
-                (models.TeamInvitation.invited_by == target_id)
-                & (models.TeamInvitation.student_id == requester_id)
-            )
-        ).first()
-        is not None
-    )
+    exchanged = db.query(models.TeamInvitation).filter(
+        (
+            (models.TeamInvitation.invited_by == requester_id)
+            & (models.TeamInvitation.student_id == target_id)
+        )
+        | (
+            (models.TeamInvitation.invited_by == target_id)
+            & (models.TeamInvitation.student_id == requester_id)
+        )
+    ).all()
+    now = utc_now()
+    return any(not _invitation_expired(invitation, now) for invitation in exchanged)
 
 
 @app.get("/students/{student_id}/contact")
@@ -1531,9 +1533,9 @@ def _may_view_team_contact(db: Session, team_id: int, requester_id: int) -> bool
     """Team contact information requires an explicit relationship.
 
     Allowed: a current member of the team (the creator is always a
-    member) or the student targeted by a pending invitation to this
+    member) or the student targeted by a *live* invitation to this
     team (so they can decide whether to accept). Being signed in is
-    not enough on its own.
+    not enough on its own, and an expired invitation no longer counts.
     """
     if db.query(models.TeamMember).filter(
         models.TeamMember.team_id == team_id,
@@ -1541,13 +1543,12 @@ def _may_view_team_contact(db: Session, team_id: int, requester_id: int) -> bool
     ).first():
         return True
 
-    return (
-        db.query(models.TeamInvitation).filter(
-            models.TeamInvitation.team_id == team_id,
-            models.TeamInvitation.student_id == requester_id,
-        ).first()
-        is not None
-    )
+    invitation = db.query(models.TeamInvitation).filter(
+        models.TeamInvitation.team_id == team_id,
+        models.TeamInvitation.student_id == requester_id,
+    ).first()
+
+    return invitation is not None and not _invitation_expired(invitation)
 
 
 @app.get("/teams/{team_id}/contact")
@@ -1583,6 +1584,200 @@ def get_team_contact(
     finally:
         db.close()
 
+# =========================
+# TEAM INVITATIONS
+# =========================
+#
+# An invitation is a proposal, not a reservation: the invitee decides,
+# and the team keeps the spot until they say yes. That stays fair only
+# if both sides can see and undo what the other side has done, so:
+#
+#   * the invitee gets a real inbox entry (who invited them, which
+#     team, how big it is, when it expires) instead of a bare team
+#     name with two buttons,
+#   * the owner gets a "sent" list with revoke and resend, instead of
+#     sending into a void and discovering the result only when the
+#     student shows up as a member,
+#   * an invitation expires, so neither side is left holding a
+#     months-old maybe that can still change the team at any moment.
+
+
+def _as_utc(value):
+    """Normalize a stored timestamp for comparison with utc_now().
+
+    SQLite returns naive datetimes even for timezone-aware columns, so
+    `value > utc_now()` raises TypeError without this. Everything here
+    is stored in UTC (models.utc_now), so attaching it back is correct.
+    """
+    if value is None:
+        return None
+    return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+
+
+def _iso(value):
+    """An ISO-8601 UTC string for the API, or None when unknown."""
+    normalized = _as_utc(value)
+    return normalized.isoformat() if normalized else None
+
+
+def _invitation_expired(invitation, now=None) -> bool:
+    """True once the invitation's deadline has passed.
+
+    A NULL expiry (a row written before migration 0003 backfilled it)
+    counts as "no deadline" rather than silently dropping a live
+    invitation.
+    """
+    expires_at = _as_utc(invitation.expires_at)
+    if expires_at is None:
+        return False
+    return (now or utc_now()) >= expires_at
+
+
+def _invitation_days_remaining(invitation, now=None) -> int:
+    """Whole days left, rounded up — "1 day" for the last 24 hours,
+    0 once expired. None when the invitation has no deadline."""
+    expires_at = _as_utc(invitation.expires_at)
+    if expires_at is None:
+        return None
+    seconds = (expires_at - (now or utc_now())).total_seconds()
+    if seconds <= 0:
+        return 0
+    return int(seconds // 86400) + (1 if seconds % 86400 else 0)
+
+
+def _actionable_invitations(db, team):
+    """The team's invitations that could still become memberships.
+
+    Three things silently void an invitation, and each one has to stop
+    holding a spot on the team:
+
+      * the invitee joined another team (they can no longer accept),
+      * the deadline passed,
+      * the team changed owner (the invitation came from someone who
+        no longer speaks for the team).
+
+    Rows are kept rather than deleted — the audit trail and a later
+    "leave the team" both want them — but they never count against the
+    team's capacity from here on.
+    """
+    invitations = db.query(models.TeamInvitation).filter(
+        models.TeamInvitation.team_id == team.id
+    ).all()
+    if not invitations:
+        return []
+
+    member_ids = {
+        student_id for (student_id,) in db.query(
+            models.TeamMember.student_id
+        ).filter(
+            models.TeamMember.student_id.in_(
+                [invitation.student_id for invitation in invitations]
+            )
+        ).all()
+    }
+
+    now = utc_now()
+    return [
+        invitation
+        for invitation in invitations
+        if invitation.invited_by == team.created_by
+        and invitation.student_id not in member_ids
+        and not _invitation_expired(invitation, now)
+    ]
+
+
+def _member_count(db, team_id) -> int:
+    return db.query(models.TeamMember).filter(
+        models.TeamMember.team_id == team_id
+    ).count()
+
+
+def _my_invitation_entry(db, invitation, team) -> dict:
+    """An inbox entry: everything the invitee needs to decide."""
+    inviter = db.query(models.Student).filter(
+        models.Student.id == invitation.invited_by
+    ).first()
+    member_count = _member_count(db, team.id)
+
+    return {
+        "id": invitation.id,
+        "team_id": team.id,
+        "team_name": team.name,
+        "project_title": team.project_title,
+        "department_preference": team.department_preference,
+        "member_count": member_count,
+        "spots_available": team.spots_available,
+        "inviter": (
+            {
+                "id": inviter.id,
+                "name": inviter.name,
+                "program": inviter.program,
+            }
+            if inviter
+            else None
+        ),
+        "created_at": _iso(invitation.created_at),
+        "expires_at": _iso(invitation.expires_at),
+        "days_remaining": _invitation_days_remaining(invitation),
+    }
+
+
+def _sent_invitation_entry(db, invitation, student=None) -> dict:
+    """A sent-invitation row for the owner's management list."""
+    if student is None:
+        student = db.query(models.Student).filter(
+            models.Student.id == invitation.student_id
+        ).first()
+    expired = _invitation_expired(invitation)
+
+    return {
+        "id": invitation.id,
+        "team_id": invitation.team_id,
+        "student_id": invitation.student_id,
+        "student": (
+            {
+                "id": student.id,
+                "name": student.name,
+                "program": student.program,
+                "university_id": student.university_id,
+                "profile_picture": student.profile_picture,
+            }
+            if student
+            else None
+        ),
+        "status": "expired" if expired else "pending",
+        "created_at": _iso(invitation.created_at),
+        "expires_at": _iso(invitation.expires_at),
+        "days_remaining": _invitation_days_remaining(invitation),
+    }
+
+
+def _ordered_by_sent_at(entries):
+    """Newest invitation first — the one just sent is the one in view."""
+    return sorted(
+        entries,
+        key=lambda entry: entry["created_at"] or "",
+        reverse=True,
+    )
+
+
+def _purge_expired_invitations(db, team_id=None) -> None:
+    """Delete invitations past their deadline.
+
+    Expiry is enforced on read everywhere it matters, so this is
+    housekeeping rather than a correctness requirement — but without it
+    the table keeps rows nobody can act on, and the unique constraint
+    would block a legitimate re-invite of the same student.
+    """
+    query = db.query(models.TeamInvitation).filter(
+        models.TeamInvitation.expires_at.isnot(None),
+        models.TeamInvitation.expires_at <= utc_now(),
+    )
+    if team_id is not None:
+        query = query.filter(models.TeamInvitation.team_id == team_id)
+    query.delete(synchronize_session=False)
+
+
 @app.post("/teams/{team_id}/invitations/{student_id}")
 def invite_team_member(
     team_id: int,
@@ -1604,25 +1799,379 @@ def invite_team_member(
             models.Student.email_verified.is_(True)
         ).first()
         if not student:
-            raise HTTPException(status_code=404, detail="Verified student not found")
+            raise HTTPException(status_code=404, detail="That student could not be found")
         if db.query(models.TeamMember).filter(
             models.TeamMember.student_id == student_id
         ).first():
-            raise HTTPException(status_code=400, detail="Student is already in a team")
-        if team.spots_available <= 0 or db.query(models.TeamMember).filter(
-            models.TeamMember.team_id == team_id
-        ).count() >= MAX_TEAM_MEMBERS:
-            raise HTTPException(status_code=400, detail="This team has no available spots")
+            raise HTTPException(
+                status_code=400,
+                detail=f"{student.name} is already in a team"
+            )
+
+        # Lapsed invitations for this team are cleared out under the
+        # team lock, so re-inviting someone whose invitation expired is
+        # a plain new invitation instead of a unique-constraint error.
+        _purge_expired_invitations(db, team_id)
+        existing = db.query(models.TeamInvitation).filter(
+            models.TeamInvitation.team_id == team_id,
+            models.TeamInvitation.student_id == student_id
+        ).first()
+        if existing:
+            raise HTTPException(
+                status_code=409,
+                detail=f"{student.name} has already been invited to this team"
+            )
+
+        # Two capacity rules, in order of how surprising they are:
+        # the spots the owner chose to advertise, then the hard team
+        # size. Reserving a spot per pending invitation is what stops
+        # six people being invited to a team with one place left, each
+        # of whom would otherwise only discover the conflict after
+        # accepting.
+        pending = _actionable_invitations(db, team)
+        if team.spots_available <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "This team has no open spots. Edit the team to offer "
+                    "more spots before inviting anyone."
+                )
+            )
+        if len(pending) >= team.spots_available:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"All {team.spots_available} open "
+                    f"{'spot is' if team.spots_available == 1 else 'spots are'} "
+                    "already promised to invited students. Revoke an "
+                    "invitation, or offer more spots, to invite someone else."
+                )
+            )
+        if _member_count(db, team_id) + len(pending) >= MAX_TEAM_MEMBERS:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"All {MAX_TEAM_MEMBERS} spots are already taken or promised. "
+                    "Revoke a pending invitation or remove a member first."
+                )
+            )
 
         db.add(models.TeamInvitation(
             team_id=team_id, student_id=student_id, invited_by=current_student.id
         ))
+        message = (
+            f"Invitation sent to {student.name}. They have to accept "
+            "before joining."
+        )
+
         try:
             db.commit()
         except IntegrityError:
             db.rollback()
-            raise HTTPException(status_code=409, detail="Invitation already pending")
-        return {"message": "Invitation sent; the student must accept to join"}
+            raise HTTPException(
+                status_code=409,
+                detail=f"{student.name} has already been invited to this team"
+            )
+
+        log_event(
+            "team_invitation_sent",
+            student_id=current_student.id,
+            team_id=team_id,
+            invitee_id=student_id,
+        )
+        invitation = db.query(models.TeamInvitation).filter(
+            models.TeamInvitation.team_id == team_id,
+            models.TeamInvitation.student_id == student_id
+        ).first()
+        return {
+            "message": message,
+            "invitation": _sent_invitation_entry(db, invitation, student),
+        }
+    finally:
+        db.close()
+
+
+@app.get("/teams/{team_id}/invitations")
+def list_team_invitations(
+    team_id: int,
+    current_student: models.Student = Depends(get_current_student)
+):
+    """The owner's side of the conversation: who has been invited,
+    when, and whether it is still open.
+
+    Only the owner sees it — who a team has invited is team business.
+    Invitations to students who joined another team are dropped: they
+    can never be accepted, so managing them would be theatre.
+    """
+    db = database.SessionLocal()
+    try:
+        team = db.query(models.Team).filter(models.Team.id == team_id).first()
+        if not team:
+            raise HTTPException(status_code=404, detail="Team not found")
+        if team.created_by != current_student.id:
+            raise HTTPException(
+                status_code=403,
+                detail="Only the team owner can manage invitations"
+            )
+
+        # Expiry is already filtered out of the list below; expired rows
+        # are physically removed when the owner next sends or re-sends
+        # an invitation (see invite_team_member), where a write is part
+        # of the transaction anyway.
+        invitations = db.query(models.TeamInvitation).filter(
+            models.TeamInvitation.team_id == team_id
+        ).all()
+        # Same rule as the capacity count: an invitation to someone who
+        # is already on a team can never be accepted, so it is not
+        # offered back as something to manage.
+        in_any_team_ids = {
+            student_id for (student_id,) in db.query(
+                models.TeamMember.student_id
+            ).filter(
+                models.TeamMember.student_id.in_(
+                    [invitation.student_id for invitation in invitations]
+                )
+            ).all()
+        } if invitations else set()
+
+        entries = _ordered_by_sent_at([
+            _sent_invitation_entry(db, invitation)
+            for invitation in invitations
+            if invitation.student_id not in in_any_team_ids
+        ])
+        member_count = _member_count(db, team_id)
+        open_count = sum(1 for entry in entries if entry["status"] == "pending")
+
+        # How many more invitations this team may actually send: bounded
+        # by the hard team size AND by the spots the owner chose to
+        # advertise (a team that closed its spots can promise nothing
+        # new, however many places the arithmetic would allow).
+        return {
+            "invitations": entries,
+            "member_count": member_count,
+            "spots_available": team.spots_available,
+            "open_invitations": open_count,
+            "invitable_spots": max(0, min(
+                team.spots_available,
+                MAX_TEAM_MEMBERS - member_count - open_count,
+            )),
+        }
+    finally:
+        db.close()
+
+
+@app.delete("/teams/{team_id}/invitations/{invitation_id}")
+def revoke_team_invitation(
+    team_id: int,
+    invitation_id: int,
+    current_student: models.Student = Depends(get_current_student)
+):
+    """Withdraw an invitation the owner no longer stands behind."""
+    db = database.SessionLocal()
+    try:
+        team = db.query(models.Team).filter(
+            models.Team.id == team_id
+        ).with_for_update().first()
+        if not team:
+            raise HTTPException(status_code=404, detail="Team not found")
+        if team.created_by != current_student.id:
+            raise HTTPException(
+                status_code=403,
+                detail="Only the team owner can manage invitations"
+            )
+
+        invitation = db.query(models.TeamInvitation).filter(
+            models.TeamInvitation.id == invitation_id,
+            models.TeamInvitation.team_id == team_id
+        ).with_for_update().first()
+        if not invitation:
+            raise HTTPException(status_code=404, detail="Invitation not found")
+
+        invitee_id = invitation.student_id
+        db.delete(invitation)
+        db.commit()
+
+        log_event(
+            "team_invitation_revoked",
+            student_id=current_student.id,
+            team_id=team_id,
+            invitee_id=invitee_id,
+        )
+        return {"message": "Invitation revoked"}
+    finally:
+        db.close()
+
+
+@app.post("/invitations/{invitation_id}/resend")
+def resend_team_invitation(
+    invitation_id: int,
+    current_student: models.Student = Depends(get_current_student)
+):
+    """Give a lapsed (or about to lapse) invitation a fresh deadline."""
+    db = database.SessionLocal()
+    try:
+        invitation_team = db.query(models.TeamInvitation.team_id).filter(
+            models.TeamInvitation.id == invitation_id
+        ).first()
+        if not invitation_team:
+            raise HTTPException(status_code=404, detail="Invitation not found")
+
+        team = db.query(models.Team).filter(
+            models.Team.id == invitation_team.team_id
+        ).with_for_update().first()
+        if not team:
+            raise HTTPException(status_code=404, detail="Team not found")
+
+        invitation = db.query(models.TeamInvitation).filter(
+            models.TeamInvitation.id == invitation_id
+        ).with_for_update().first()
+        if not invitation or invitation.team_id != team.id:
+            raise HTTPException(status_code=404, detail="Invitation not found")
+        if team.created_by != current_student.id:
+            raise HTTPException(
+                status_code=403,
+                detail="Only the team owner can manage invitations"
+            )
+        if invitation.invited_by != team.created_by:
+            raise HTTPException(
+                status_code=409,
+                detail="This invitation is no longer valid. Send a new one instead."
+            )
+
+        student = db.query(models.Student).filter(
+            models.Student.id == invitation.student_id
+        ).first()
+        if not student:
+            raise HTTPException(status_code=404, detail="That student could not be found")
+        if db.query(models.TeamMember).filter(
+            models.TeamMember.student_id == invitation.student_id
+        ).first():
+            raise HTTPException(
+                status_code=409,
+                detail=f"{student.name} has already joined another team"
+            )
+        if _member_count(db, team.id) >= MAX_TEAM_MEMBERS:
+            raise HTTPException(
+                status_code=409,
+                detail="This team is full, so the invitation cannot be re-sent"
+            )
+        # The spot must still be free for this student: counting the
+        # other pending invitations only, not the one being renewed.
+        promised_elsewhere = [
+            pending for pending in _actionable_invitations(db, team)
+            if pending.id != invitation.id
+        ]
+        if len(promised_elsewhere) >= team.spots_available:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "That spot has already been promised to another student. "
+                    "Revoke that invitation first."
+                )
+            )
+
+        invitation.created_at = utc_now()
+        invitation.expires_at = utc_now() + INVITATION_TTL
+        db.commit()
+
+        log_event(
+            "team_invitation_resent",
+            student_id=current_student.id,
+            team_id=team.id,
+            invitee_id=invitation.student_id,
+        )
+        return {
+            "message": f"Invitation re-sent to {student.name}",
+            "invitation": _sent_invitation_entry(db, invitation, student),
+        }
+    finally:
+        db.close()
+
+
+@app.get("/teams/{team_id}/invitations/candidates")
+def invitation_candidates(
+    team_id: int,
+    query: str = "",
+    limit: int = 20,
+    current_student: models.Student = Depends(get_current_student)
+):
+    """Students an owner could invite, searched rather than paginated.
+
+    The old flow offered a dropdown over the first 50 rows of the
+    directory, which on any real cohort is a random 50 people — most of
+    them already in a team, none of them findable. This searches by
+    name, program or university id and labels every result, so the
+    owner sees *why* someone can or cannot be invited before clicking.
+    """
+    limit = min(max(limit, 1), 50)
+
+    db = database.SessionLocal()
+    try:
+        team = db.query(models.Team).filter(models.Team.id == team_id).first()
+        if not team:
+            raise HTTPException(status_code=404, detail="Team not found")
+        if team.created_by != current_student.id:
+            raise HTTPException(
+                status_code=403,
+                detail="Only the team owner can invite members"
+            )
+
+        search = query.strip()
+        students = db.query(models.Student).filter(
+            models.Student.email_verified.is_(True),
+            models.Student.id != current_student.id,
+        )
+        if search:
+            pattern = f"%{search.lower()}%"
+            students = students.filter(
+                func.lower(models.Student.name).like(pattern)
+                | func.lower(models.Student.program).like(pattern)
+                | func.lower(models.Student.university_id).like(pattern)
+            )
+
+        # Over-fetch, then rank: with a full cohort a plain LIMIT would
+        # page past every invitable student into the "already in a team"
+        # ones. Bounded so a broad search cannot pull the directory.
+        matches = students.order_by(models.Student.name).limit(limit * 5).all()
+        if not matches:
+            return {"results": [], "query": search}
+
+        team_invitations = db.query(models.TeamInvitation).filter(
+            models.TeamInvitation.team_id == team_id
+        ).all()
+        # A lapsed invitation holds nothing: its student is invitable
+        # again, not "already invited".
+        now = utc_now()
+        invited_ids = {
+            invitation.student_id for invitation in team_invitations
+            if not _invitation_expired(invitation, now)
+        }
+        in_any_team_ids = {
+            student_id for (student_id,) in db.query(
+                models.TeamMember.student_id
+            ).filter(
+                models.TeamMember.student_id.in_([student.id for student in matches])
+            ).all()
+        }
+
+        entries = []
+        for student in matches:
+            if student.id in in_any_team_ids:
+                status = "in-team"
+            elif student.id in invited_ids:
+                status = "invited"
+            else:
+                status = "invitable"
+            entries.append({
+                **_directory_entry(student, include_picture=False),
+                "status": status,
+            })
+
+        # Invitable first, then already-invited, then unavailable —
+        # the top of the list is always the action that can succeed.
+        rank = {"invitable": 0, "invited": 1, "in-team": 2}
+        entries.sort(key=lambda entry: (rank[entry["status"]], entry["name"]))
+        return {"results": entries[:limit], "query": search}
     finally:
         db.close()
 
@@ -1644,11 +2193,21 @@ def get_my_invitations(current_student: models.Student = Depends(get_current_stu
         rows = db.query(models.TeamInvitation, models.Team).join(
             models.Team, models.Team.id == models.TeamInvitation.team_id
         ).filter(models.TeamInvitation.student_id == current_student.id).all()
-        return [
-            {"id": invitation.id, "team_id": team.id, "team_name": team.name}
-            for invitation, team in rows
-            if invitation.invited_by == team.created_by
-        ]
+
+        entries = []
+        now = utc_now()
+        for invitation, team in rows:
+            # An invitation from a previous owner no longer speaks for
+            # the team, and an expired one is no longer a choice — both
+            # are dropped rather than offered as buttons that can only
+            # fail.
+            if invitation.invited_by != team.created_by:
+                continue
+            if _invitation_expired(invitation, now):
+                continue
+            entries.append(_my_invitation_entry(db, invitation, team))
+
+        return _ordered_by_sent_at(entries)
     finally:
         db.close()
 
@@ -1692,6 +2251,11 @@ def accept_invitation(
             raise HTTPException(status_code=404, detail="Invitation not found")
         if invitation.invited_by != team.created_by:
             raise HTTPException(status_code=409, detail="Invitation is no longer valid")
+        if _invitation_expired(invitation):
+            raise HTTPException(
+                status_code=409,
+                detail="This invitation has expired. Ask the team owner to send a new one."
+            )
         if db.query(models.TeamMember).filter(
             models.TeamMember.student_id == current_student.id
         ).first():
@@ -1726,7 +2290,7 @@ def accept_invitation(
 
         log_event("team_joined", student_id=current_student.id,
                   team_id=invitation.team_id, invitation_id=invitation_id)
-        return {"message": "You joined the team"}
+        return {"message": f"You joined {team.name}"}
     finally:
         db.close()
 

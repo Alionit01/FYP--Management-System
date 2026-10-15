@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from sqlalchemy import (
     Boolean,
     Column,
@@ -10,6 +12,22 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from .database import Base
+
+
+# How long a team invitation stays actionable. Without a deadline a
+# sent invitation used to live forever, so an owner's "pending" list
+# slowly filled with people who had long since lost interest, and the
+# student it was addressed to kept an Accept button that could join a
+# team they no longer wanted. An expiry turns a silent maybe into a
+# clear "ask again" (see INVITATION_TTL_DAYS in the frontend mirror).
+INVITATION_TTL_DAYS = 14
+INVITATION_TTL = timedelta(days=INVITATION_TTL_DAYS)
+
+
+def utc_now() -> datetime:
+    """Timezone-aware UTC now. Stored values come back naive from
+    SQLite, so readers normalize with `.replace(tzinfo=timezone.utc)`."""
+    return datetime.now(timezone.utc)
 
 
 # Application-controlled roles. The role column is written only by this
@@ -123,6 +141,20 @@ class TeamInvitation(Base):
     )
     invited_by = Column(
         Integer, ForeignKey("students.id"), nullable=False
+    )
+    # When the invitation was sent, and when it stops being actionable.
+    # Row existence alone is no longer "pending": an expired invitation
+    # is hidden from the invitee, cannot be accepted, and no longer
+    # holds a spot on the team (the owner can resend it instead).
+    created_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+    )
+    expires_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: utc_now() + INVITATION_TTL,
     )
 
     __table_args__ = (

@@ -40,6 +40,7 @@ from sqlalchemy import Column, DateTime, String, text
 from sqlalchemy.orm import Session
 
 from .database import Base, engine
+from .models import INVITATION_TTL
 
 
 class MigrationError(RuntimeError):
@@ -74,6 +75,10 @@ def _inspector(engine_):
     return inspect(engine_)
 
 
+def _table_exists(engine_, table: str) -> bool:
+    return table in _inspector(engine_).get_table_names()
+
+
 def _has_column(engine_, table: str, column: str) -> bool:
     return any(
         col["name"] == column
@@ -85,8 +90,12 @@ def _add_column(engine_, table: str, ddl: str, *, default_literal=None) -> None:
     """Add ``table.column`` if it is missing (works on SQLite too).
 
     SQLite cannot ``ADD COLUMN IF NOT EXISTS``, so we ask the schema
-    instead of relying on vendor syntax.
+    instead of relying on vendor syntax. A table that does not exist at
+    all is nothing to migrate: the ORM creates it with its full current
+    shape on the next ``create_all``.
     """
+    if not _table_exists(engine_, table):
+        return
     if _has_column(engine_, table, column := ddl.split()[0]):
         return
     with engine_.begin() as conn:
@@ -202,6 +211,34 @@ def _migration_0002_team_members_unique_student(engine_) -> None:
         conn_.execute(text(ddl))
 
 
+def _migration_0003_team_invitation_timestamps(engine_) -> None:
+    """Give invitations a sent-at and an expiry (INV-01).
+
+    Invitations used to be a bare (team_id, student_id) row: no sent
+    date, no deadline, no way to tell a fresh invite from one sent
+    months ago. Both columns are added without one, backfilled with
+    "just now" and "just now + INVITATION_TTL" so every existing
+    invitation becomes a normal, freshly-sent one instead of appearing
+    already expired or being deleted out from under someone.
+    """
+    _add_column(
+        engine_,
+        "team_invitations",
+        "created_at TIMESTAMP",
+        # Naive UTC, matching how the rest of this schema stores
+        # timestamps for SQLite (readers attach tzinfo back).
+        default_literal=datetime.now(timezone.utc).replace(tzinfo=None),
+    )
+    _add_column(
+        engine_,
+        "team_invitations",
+        "expires_at TIMESTAMP",
+        default_literal=(
+            datetime.now(timezone.utc) + INVITATION_TTL
+        ).replace(tzinfo=None),
+    )
+
+
 MIGRATIONS = [
     ("0001_students_baseline",
      "Add students columns introduced after first deploy (no data rewrite)",
@@ -209,6 +246,9 @@ MIGRATIONS = [
     ("0002_team_members_unique_student",
      "DB-01: enforce one team membership per student",
      _migration_0002_team_members_unique_student),
+    ("0003_team_invitation_timestamps",
+     "INV-01: record when an invitation was sent and when it expires",
+     _migration_0003_team_invitation_timestamps),
 ]
 
 

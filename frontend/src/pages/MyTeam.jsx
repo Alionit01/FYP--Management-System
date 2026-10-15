@@ -8,22 +8,20 @@ import {
   Users,
 } from "lucide-react";
 import API_URL from "../api";
-import { extractErrorMessage } from "../api/errors";
+import { extractErrorMessage, MAX_TEAM_MEMBERS } from "../api/errors";
+import { memberCountLabel } from "../lib/invitations";
 import Alert from "../components/Alert";
 import Avatar from "../components/Avatar";
 import ConfirmDialog from "../components/ConfirmDialog";
 import InvitationsSection from "../components/InvitationsSection";
 import Tags from "../components/Tags";
-
-const MAX_TEAM_MEMBERS = 4;
+import TeamInvitationsPanel from "../components/TeamInvitationsPanel";
 
 function MyTeam() {
   const navigate = useNavigate();
 
   const [team, setTeam] = useState(null);
   const [members, setMembers] = useState([]);
-  const [students, setStudents] = useState([]);
-  const [selectedStudent, setSelectedStudent] = useState("");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -32,9 +30,13 @@ function MyTeam() {
   const token = localStorage.getItem("access_token");
   const studentId = localStorage.getItem("student_id");
 
-  const fetchTeam = async () => {
+  /* `showSkeleton` drives the full-page placeholder: only the very
+     first load (and joining a team) swaps the whole page out. Later
+     refreshes — after removing a member or revoking an invitation —
+     update in place, so the page does not flash back to skeletons. */
+  const fetchTeam = async ({ showSkeleton = false } = {}) => {
     try {
-      setLoading(true);
+      if (showSkeleton) setLoading(true);
       setError("");
 
       const response = await fetch(`${API_URL}/my-team`, {
@@ -47,9 +49,7 @@ function MyTeam() {
 
       if (!response.ok) {
         throw new Error(
-          typeof data.detail === "string"
-            ? data.detail
-            : "Unable to fetch team."
+          extractErrorMessage(response, data, "Unable to fetch team.")
         );
       }
 
@@ -74,7 +74,7 @@ function MyTeam() {
     } catch (err) {
       setError(err.message);
     } finally {
-      setLoading(false);
+      if (showSkeleton) setLoading(false);
     }
   };
 
@@ -82,7 +82,7 @@ function MyTeam() {
   // synchronously before the first await is what drives the skeleton UI.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchTeam();
+    fetchTeam({ showSkeleton: true });
   }, []);
 
   const handleLeaveTeam = async () => {
@@ -144,7 +144,6 @@ function MyTeam() {
     team &&
     String(team.created_by) === String(studentId);
 
-  // Only students not already on this team can be invited.
   const requestLeaveConfirm = () => {
     setConfirmState({
       title: "Leave team",
@@ -193,69 +192,6 @@ function MyTeam() {
     }
   };
 
-  const inviteStudents = students.filter(
-    (student) =>
-      !members.some(
-        (member) => String(member.id) === String(student.id)
-      )
-  );
-
-  const fetchStudents = async () => {
-    try {
-      const response = await fetch(`${API_URL}/students`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          extractErrorMessage(response, data, "Unable to fetch students.")
-        );
-      }
-
-      setStudents(data.students || data);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const handleAddMember = async () => {
-    if (!selectedStudent) return;
-
-    setMessage("");
-    setError("");
-
-    try {
-      const response = await fetch(
-        `${API_URL}/teams/${team.id}/invitations/${selectedStudent}`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          typeof data.detail === "string"
-            ? data.detail
-            : "Unable to add member."
-        );
-      }
-
-      setSelectedStudent("");
-      setMessage("Invitation sent. The student must accept before joining.");
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
   const handleRemoveMember = async (memberId) => {
     setMessage("");
     setError("");
@@ -285,15 +221,6 @@ function MyTeam() {
       setError(err.message);
     }
   };
-
-  // Owner-only: load the student directory so the invite list can render.
-  // Same fetch-on-mount shape as fetchTeam above.
-  useEffect(() => {
-    if (isOwner) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      fetchStudents();
-    }
-  }, [isOwner]);
 
   if (loading) {
     return (
@@ -331,7 +258,10 @@ function MyTeam() {
 
         {/* Accepting an invitation still lets you recover from a
             failed team fetch. */}
-        <InvitationsSection onAccepted={fetchTeam} className="mt-6" />
+        <InvitationsSection
+          onAccepted={() => fetchTeam({ showSkeleton: true })}
+          className="mt-6"
+        />
       </div>
     );
   }
@@ -387,7 +317,10 @@ function MyTeam() {
           </div>
         )}
 
-        <InvitationsSection onAccepted={fetchTeam} className="mt-6" />
+        <InvitationsSection
+          onAccepted={() => fetchTeam({ showSkeleton: true })}
+          className="mt-6"
+        />
       </div>
     );
   }
@@ -538,8 +471,7 @@ function MyTeam() {
             </h2>
 
             <p className="text-sm text-ink-muted mt-1">
-              {members.length} member
-              {members.length !== 1 ? "s" : ""}
+              {memberCountLabel(members.length, MAX_TEAM_MEMBERS)}
             </p>
           </div>
         </div>
@@ -591,55 +523,20 @@ function MyTeam() {
             );
           })}
         </ul>
-
-        {/* Add Member */}
-        {isOwner && members.length < MAX_TEAM_MEMBERS && (
-          <div className="mt-6 pt-6 divider">
-            <h3 className="text-sm font-semibold text-forest-900 mb-3">
-              Invite Team Member
-            </h3>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <select
-                value={selectedStudent}
-                onChange={(e) => setSelectedStudent(e.target.value)}
-                className="input-field flex-1 !py-2.5"
-                aria-label="Select a student to invite"
-              >
-                <option value="">Select a student</option>
-
-                {inviteStudents.map((student) => (
-                  <option key={student.id} value={student.id}>
-                    {student.program
-                      ? `${student.name} — ${student.program}`
-                      : student.name}
-                  </option>
-                ))}
-              </select>
-
-              <button
-                type="button"
-                onClick={handleAddMember}
-                disabled={!selectedStudent}
-                className="primary-button !py-2.5 shrink-0"
-              >
-                <UserPlus size={17} aria-hidden="true" />
-                Send Invitation
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Team full */}
-        {isOwner && members.length >= MAX_TEAM_MEMBERS && (
-          <div className="mt-6 pt-6 divider">
-            <p className="text-sm text-ink-muted">
-              This team is full ({MAX_TEAM_MEMBERS} members maximum).
-              Remove a member to add someone else.
-            </p>
-          </div>
-        )}
       </div>
+
+      {/* Owner-only: find someone to invite, send the invitation, and
+          manage the ones already outstanding. Rendered even when the
+          team is full — that is exactly when a stale invitation needs
+          revoking — and the panel explains why no one new can be
+          invited. */}
+      {isOwner && (
+        <TeamInvitationsPanel
+          team={team}
+          onChanged={fetchTeam}
+          className="mt-6"
+        />
+      )}
 
       {/* Leave / Delete Team */}
       <div className="mt-6 flex flex-col sm:flex-row gap-3">

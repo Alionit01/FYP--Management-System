@@ -413,6 +413,17 @@ textarea:focus-visible,
   @apply bg-cream-100 text-ink-muted border-forest-900/12;
 }
 
+/* Urgency and failure tones. Used by the invitation surfaces (a
+   deadline closing in, an offer that has lapsed) — always alongside
+   the words, never as the only signal. */
+.badge-warning {
+  @apply bg-warning-50 text-warning-700 border-sun-300/60;
+}
+
+.badge-danger {
+  @apply bg-danger-50 text-danger-700 border-danger-200;
+}
+
 /* ================================================================== */
 /* Feedback banners                                                    */
 /* ================================================================== */
