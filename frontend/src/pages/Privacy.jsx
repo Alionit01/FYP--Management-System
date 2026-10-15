@@ -5,12 +5,11 @@ import { ShieldCheck } from "lucide-react";
    visitor has to be able to read it before deciding whether to create
    an account — the consent checkbox on /register links straight here.
 
-   PLACEHOLDER: replace CONTACT_EMAIL with the real address before this
-   page is published. It is the only way a student can ask for their
-   account to be removed. */
+   CONTACT_EMAIL is the only way a student can ask for their account to
+   be removed, so it must be a real, monitored inbox. */
 
 const EFFECTIVE_DATE = "14 October 2026";
-const CONTACT_EMAIL = "privacy@REPLACE-WITH-YOUR-ADDRESS.example";
+const CONTACT_EMAIL = "ali.67267@iqra.edu.pk";
 
 /* Sections are data, not hand-rolled JSX, so the copy is easy to scan
    and edit without touching layout markup. */
