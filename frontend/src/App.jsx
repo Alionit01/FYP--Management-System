@@ -30,10 +30,26 @@ import EditTeam from "./pages/EditTeam";
 import NotFound from "./pages/NotFound";
 import Privacy from "./pages/Privacy";
 
+/* The browser restores a history entry's scroll position on its own,
+   which would undo the reset below the moment a student presses Back
+   — leaving them wherever they were on the page instead of at its
+   top. Handing scroll position to the app (React Router's data
+   routers do the same) is what makes the reset mean anything. */
+if ("scrollRestoration" in window.history) {
+  window.history.scrollRestoration = "manual";
+}
+
 function RouteFocus() {
   const location = useLocation();
 
   useEffect(() => {
+    // Route changes used to keep the previous scroll offset, so
+    // opening a profile from the bottom of a long directory list left
+    // the new page pinned mid-document with its back link above the
+    // fold. Keyed on the path only, so changing a filter (the query
+    // string) does not yank the page back to the top.
+    window.scrollTo(0, 0);
+
     const main = document.querySelector("main");
     if (!main) return;
 

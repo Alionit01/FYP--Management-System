@@ -26,6 +26,10 @@ function MyTeam() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [confirmState, setConfirmState] = useState(null);
+  // Which confirmed action is in flight: "leave" | "delete" | "remove".
+  // Nothing else may start while one is running, and the dialog shows
+  // it instead of closing before the request has even been sent.
+  const [busy, setBusy] = useState(null);
 
   const token = localStorage.getItem("access_token");
   const studentId = localStorage.getItem("student_id");
@@ -85,59 +89,56 @@ function MyTeam() {
     fetchTeam({ showSkeleton: true });
   }, []);
 
-  const handleLeaveTeam = async () => {
-    setMessage("");
-    setError("");
-
-    try {
-      const response = await fetch(
-        `${API_URL}/teams/${team.id}/members/me`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          extractErrorMessage(response, data, "Unable to leave team.")
-        );
-      }
-
-      navigate("/teams");
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const handleDeleteTeam = async () => {
-    setMessage("");
-    setError("");
-
-    try {
-      const response = await fetch(`${API_URL}/teams/${team.id}`, {
+  /* The three confirmed actions share one shape: they throw on
+     failure instead of swallowing it, so handleConfirm can keep the
+     dialog open while they run and decide what to show afterwards. */
+  const leaveTeam = async () => {
+    const response = await fetch(
+      `${API_URL}/teams/${team.id}/members/me`,
+      {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          extractErrorMessage(response, data, "Unable to delete team.")
-        );
       }
+    );
 
-      navigate("/teams");
-    } catch (err) {
-      setError(err.message);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        extractErrorMessage(response, data, "Unable to leave team.")
+      );
     }
+
+    // Leaving used to drop the student on the Teams page in silence.
+    // The server already words this precisely — leaving as the sole
+    // owner removes the team, leaving as owner hands over leadership —
+    // so its message is the confirmation they read.
+    navigate("/teams", {
+      state: { flash: data.message || "You left the team." },
+    });
+  };
+
+  const deleteTeam = async () => {
+    const response = await fetch(`${API_URL}/teams/${team.id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        extractErrorMessage(response, data, "Unable to delete team.")
+      );
+    }
+
+    navigate("/teams", {
+      state: { flash: data.message || "Team deleted." },
+    });
   };
 
   const isOwner =
@@ -179,47 +180,54 @@ function MyTeam() {
 
   const handleConfirm = async () => {
     const current = confirmState;
-    setConfirmState(null);
+    // Re-entry guard: Enter on the confirm button (or an impatient
+    // second click) must not start the same delete twice.
+    if (!current || busy) return;
 
-    if (!current) return;
+    setMessage("");
+    setError("");
+    setBusy(current.action);
 
-    if (current.action === "leave") {
-      await handleLeaveTeam();
-    } else if (current.action === "delete") {
-      await handleDeleteTeam();
-    } else if (current.action === "remove") {
-      await handleRemoveMember(current.memberId);
+    try {
+      if (current.action === "leave") {
+        await leaveTeam();
+      } else if (current.action === "delete") {
+        await deleteTeam();
+      } else if (current.action === "remove") {
+        await removeMember(current.memberId);
+      }
+      setConfirmState(null);
+    } catch (err) {
+      // Close the dialog so the message behind it is readable — the
+      // failure belongs on the page, not inside a modal that hides it.
+      setConfirmState(null);
+      setError(err.message);
+    } finally {
+      setBusy(null);
     }
   };
 
-  const handleRemoveMember = async (memberId) => {
-    setMessage("");
-    setError("");
-
-    try {
-      const response = await fetch(
-        `${API_URL}/teams/${team.id}/members/${memberId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          extractErrorMessage(response, data, "Unable to remove member.")
-        );
+  const removeMember = async (memberId) => {
+    const response = await fetch(
+      `${API_URL}/teams/${team.id}/members/${memberId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       }
+    );
 
-      setMessage("Member removed successfully.");
-      await fetchTeam();
-    } catch (err) {
-      setError(err.message);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        extractErrorMessage(response, data, "Unable to remove member.")
+      );
     }
+
+    setMessage("Member removed successfully.");
+    await fetchTeam();
   };
 
   if (loading) {
@@ -512,7 +520,8 @@ function MyTeam() {
                   <button
                     type="button"
                     onClick={() => requestRemoveConfirm(member)}
-                    className="p-2.5 rounded-full text-danger-700 hover:bg-danger-50 transition-colors shrink-0"
+                    disabled={busy !== null}
+                    className="p-2.5 rounded-full text-danger-700 hover:bg-danger-50 transition-colors shrink-0 disabled:opacity-50"
                     title="Remove member"
                     aria-label={`Remove ${member.name} from the team`}
                   >
@@ -543,6 +552,7 @@ function MyTeam() {
         <button
           type="button"
           onClick={requestLeaveConfirm}
+          disabled={busy !== null}
           className="danger-button w-full sm:w-auto"
         >
           Leave Team
@@ -552,6 +562,7 @@ function MyTeam() {
           <button
             type="button"
             onClick={requestDeleteConfirm}
+            disabled={busy !== null}
             className="danger-button w-full sm:w-auto"
           >
             <Trash2 size={16} aria-hidden="true" />
@@ -565,6 +576,14 @@ function MyTeam() {
           title={confirmState.title}
           message={confirmState.message}
           confirmLabel={confirmState.confirmLabel}
+          pending={busy !== null}
+          pendingLabel={
+            confirmState.action === "leave"
+              ? "Leaving…"
+              : confirmState.action === "delete"
+                ? "Deleting…"
+                : "Removing…"
+          }
           onCancel={() => setConfirmState(null)}
           onConfirm={handleConfirm}
         />

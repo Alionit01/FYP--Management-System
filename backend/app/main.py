@@ -5,7 +5,7 @@ import time
 from collections import deque
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
@@ -770,12 +770,50 @@ def _directory_entry(student: models.Student, include_picture: bool = True) -> d
     return entry
 
 
+def _search_pattern(term: str) -> str:
+    """Turn a typed term into a case-insensitive `LIKE` pattern.
+
+    % and _ are LIKE's own wildcards, so a student searching for
+    "BSCS_1" or "100%" must not silently match everything — they are
+    escaped here and the backslash is declared as the escape character
+    at the call site. The term is lowercased once so callers can use
+    `func.lower(column).like(pattern)` and get the same case-folding
+    on every database backend.
+    """
+    escaped = (
+        term.lower()
+        .replace("\\", "\\\\")
+        .replace("%", "\\%")
+        .replace("_", "\\_")
+    )
+    return f"%{escaped}%"
+
+
+def _contains(column, pattern: str):
+    """One case-insensitive "contains" clause for `_search_pattern`.
+
+    Written as a helper so every directory search folds case the same
+    way and honours the same escape character.
+    """
+    return func.lower(column).like(pattern, escape="\\")
+
+
 @app.get("/students")
 def get_students(
     skip: int = 0,
     limit: int = 50,
+    search: str = "",
+    program: str = "",
+    status: str = "",
     current_student=Depends(get_current_student),
 ):
+    """The student directory, filtered server-side.
+
+    Filtering used to happen in the browser over whichever 50 rows had
+    been fetched, so a classmate on page two was reported as "no
+    students found". The filters now narrow the query itself and
+    pagination walks the *filtered* set in a stable order.
+    """
 
     limit = min(max(limit, 1), 100)
     skip = max(skip, 0)
@@ -783,7 +821,32 @@ def get_students(
     db = database.SessionLocal()
 
     try:
-        students = db.query(models.Student).offset(skip).limit(limit).all()
+        query = db.query(models.Student)
+
+        program = (program or "").strip()
+        if program and program != "All":
+            query = query.filter(models.Student.program == program)
+
+        status = (status or "").strip()
+        if status and status != "All":
+            query = query.filter(models.Student.fyp_status == status)
+
+        term = (search or "").strip()
+        if term:
+            pattern = _search_pattern(term)
+            query = query.filter(
+                or_(
+                    _contains(models.Student.name, pattern),
+                    _contains(models.Student.program, pattern),
+                    _contains(models.Student.university_id, pattern),
+                    _contains(models.Student.skills, pattern),
+                    _contains(models.Student.interests, pattern),
+                )
+            )
+
+        students = (
+            query.order_by(models.Student.id).offset(skip).limit(limit).all()
+        )
         return [
             _directory_entry(student, include_picture=False)
             for student in students
@@ -1325,33 +1388,71 @@ def leave_team(
         db.close()
 
 @app.get("/teams")
-def get_teams(skip: int = 0, limit: int = 50):
+def get_teams(
+    skip: int = 0,
+    limit: int = 50,
+    search: str = "",
+    program: str = "",
+):
+    """The team directory, filtered the same way the students one is.
+
+    Anonymous access is kept as it was: teams are public, their
+    members' details are not (that comes from GET /teams/{id}).
+    """
 
     limit = min(max(limit, 1), 100)
     skip = max(skip, 0)
 
     db = database.SessionLocal()
 
-    teams = db.query(models.Team).offset(skip).limit(limit).all()
+    try:
+        query = db.query(models.Team)
 
-    result = []
+        program = (program or "").strip()
+        if program and program != "All":
+            # "Any Department" means the team takes anyone, so choosing
+            # a program must still show it — exactly what the client
+            # side filter used to do, and easy to lose here.
+            query = query.filter(
+                or_(
+                    models.Team.department_preference == program,
+                    models.Team.department_preference == "Any",
+                )
+            )
 
-    for team in teams:
-        result.append({
-            "id": team.id,
-            "name": team.name,
-            "project_title": team.project_title,
-            "description": team.description,
-            "department_preference": team.department_preference,
-            "spots_available": team.spots_available,
-            "skills_needed": team.skills_needed,
-            "roles_needed": team.roles_needed,
-            "created_by": team.created_by
-        })
+        term = (search or "").strip()
+        if term:
+            pattern = _search_pattern(term)
+            query = query.filter(
+                or_(
+                    _contains(models.Team.name, pattern),
+                    _contains(models.Team.project_title, pattern),
+                    _contains(models.Team.description, pattern),
+                    _contains(models.Team.skills_needed, pattern),
+                    _contains(models.Team.roles_needed, pattern),
+                )
+            )
 
-    db.close()
+        teams = (
+            query.order_by(models.Team.id).offset(skip).limit(limit).all()
+        )
 
-    return result
+        return [
+            {
+                "id": team.id,
+                "name": team.name,
+                "project_title": team.project_title,
+                "description": team.description,
+                "department_preference": team.department_preference,
+                "spots_available": team.spots_available,
+                "skills_needed": team.skills_needed,
+                "roles_needed": team.roles_needed,
+                "created_by": team.created_by,
+            }
+            for team in teams
+        ]
+    finally:
+        db.close()
 
 @app.get("/teams/{team_id}")
 def get_team(

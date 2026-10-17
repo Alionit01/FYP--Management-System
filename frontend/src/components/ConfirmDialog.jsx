@@ -6,6 +6,12 @@ function ConfirmDialog({
   message,
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
+  // While the confirmed action is running the dialog stays up and the
+  // Confirm button locks: without that, a second click (or a double
+  // tap on the button underneath) could fire the same delete twice.
+  // Cancel stays available so nobody is ever trapped behind a spinner.
+  pending = false,
+  pendingLabel = "Working…",
   onConfirm,
   onCancel,
 }) {
@@ -58,6 +64,7 @@ function ConfirmDialog({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
+        aria-busy={pending || undefined}
         aria-labelledby="confirm-dialog-title"
         className="card animate-pop w-full max-w-md p-6 sm:p-7"
         onClick={(event) => event.stopPropagation()}
@@ -97,9 +104,10 @@ function ConfirmDialog({
           <button
             type="button"
             onClick={onConfirm}
+            disabled={pending}
             className="danger-button"
           >
-            {confirmLabel}
+            {pending ? pendingLabel : confirmLabel}
           </button>
         </div>
       </div>

@@ -168,6 +168,17 @@ function Navbar() {
                 )}
 
                 <Link
+                  to="/my-team"
+                  aria-current={isActive("/my-team") ? "page" : undefined}
+                  className={linkClass(
+                    isActive("/my-team"),
+                    "text-sm font-medium px-3.5 py-2 rounded-full transition-colors"
+                  )}
+                >
+                  My Team
+                </Link>
+
+                <Link
                   to="/my-profile"
                   aria-current={
                     isActive("/my-profile") ? "page" : undefined
@@ -272,6 +283,18 @@ function Navbar() {
                       </span>
                     </Link>
                   )}
+
+                  <Link
+                    to="/my-team"
+                    onClick={handleLinkClick}
+                    className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
+                      isActive("/my-team")
+                        ? "bg-forest-100 text-forest-900"
+                        : "text-ink-soft hover:bg-forest-50 hover:text-forest-900"
+                    }`}
+                  >
+                    My Team
+                  </Link>
 
                   <Link
                     to="/my-profile"

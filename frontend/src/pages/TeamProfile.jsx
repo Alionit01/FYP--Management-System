@@ -3,6 +3,7 @@ import { ArrowLeft, Pencil, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import API_URL from "../api";
 import { classifyFailure } from "../api/errors";
+import Alert from "../components/Alert";
 import Avatar from "../components/Avatar";
 import Tags from "../components/Tags";
 
@@ -18,6 +19,24 @@ function TeamProfile() {
      signed-out visitor is the common case — and telling them "team not
      found" when the team exists is simply wrong (audit FE-04). */
   const [failure, setFailure] = useState(null);
+
+  /* A confirmation handed over by the edit form (see EditTeam.jsx).
+     It is copied into local state and then dropped from the history
+     entry, so pressing Back does not replay a notice already read.
+     The set is batched with the navigate() right below it, so it
+     costs no extra render pass — which is what the rule is guarding
+     against, and why it cannot see this through the router call. */
+  const [flash, setFlash] = useState(location.state?.flash || "");
+  useEffect(() => {
+    const incoming = location.state?.flash;
+    if (!incoming || incoming === flash) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setFlash(incoming);
+    navigate(location.pathname + location.search, {
+      replace: true,
+      state: null,
+    });
+  }, [location.state, location.pathname, location.search, navigate, flash]);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -203,6 +222,15 @@ function TeamProfile() {
         <ArrowLeft size={16} aria-hidden="true" />
         <span>Back to Teams</span>
       </button>
+
+      {/* "Team updated." travels here in navigation state from the edit
+          form, and is dropped from the history entry immediately so
+          pressing Back does not replay it over a page already read. */}
+      {flash && (
+        <div className="mt-5">
+          <Alert kind="success">{flash}</Alert>
+        </div>
+      )}
 
       {/* Team Header */}
       <section className="card mt-6 p-5 sm:p-8">
