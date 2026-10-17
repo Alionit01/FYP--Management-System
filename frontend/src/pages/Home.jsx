@@ -6,6 +6,7 @@ import {
   Search,
   Users,
 } from "lucide-react";
+import { GITHUB_REPO_URL } from "../lib/site";
 
 /* Ambient backdrop for the hero: two soft blurred gradients and a
    faint grid that dissolves before it reaches the text. No floating
@@ -323,6 +324,21 @@ function Home() {
                 Create an account
               </Link>
             </div>
+
+            {/* A quiet line for whoever wonders how any of this is
+                built — one link, no button, so it never competes with
+                the two calls to action above it. */}
+            <p className="mt-7 text-xs text-cream-100/55">
+              Curious how it works?{" "}
+              <a
+                href={GITHUB_REPO_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-cream-100/85 underline decoration-cream-100/30 underline-offset-4 transition-colors hover:text-cream-50 hover:decoration-cream-100/70"
+              >
+                View the source on GitHub
+              </a>
+            </p>
           </div>
         </div>
       </section>

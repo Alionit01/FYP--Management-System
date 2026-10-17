@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { GITHUB_REPO_URL } from "../lib/site";
 import Logo from "./Logo";
 
 /* Site footer. Only links to routes that actually exist, and it mirrors
@@ -84,6 +85,16 @@ function Footer() {
             >
               Privacy Policy
             </Link>
+
+            <a
+              href={GITHUB_REPO_URL}
+              target="_blank"
+              rel="noreferrer"
+              title="FYP Finder source code on GitHub"
+              className="text-xs text-ink-muted underline-offset-4 transition-colors hover:text-forest-800 hover:underline"
+            >
+              Source code
+            </a>
 
             <p className="text-xs text-ink-muted">
               Students of Iqra University · @iqra.edu.pk
